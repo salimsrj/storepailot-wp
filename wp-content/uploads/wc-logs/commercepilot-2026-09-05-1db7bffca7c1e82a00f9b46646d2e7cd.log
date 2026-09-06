@@ -1,0 +1,11 @@
+2026-09-05T12:31:55+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":503}
+2026-09-05T12:32:00+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":500}
+2026-09-05T12:32:53+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":503}
+2026-09-05T12:33:46+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":503}
+2026-09-05T12:34:10+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":503}
+2026-09-05T12:34:43+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":429}
+2026-09-05T12:35:03+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":429}
+2026-09-05T12:38:24+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":429}
+2026-09-05T12:39:18+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":429}
+2026-09-05T12:43:42+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":429}
+2026-09-05T12:53:13+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":429}

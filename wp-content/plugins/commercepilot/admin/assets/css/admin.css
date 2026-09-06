@@ -1,0 +1,290 @@
+.cp-admin .cp-admin__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 16px;
+	margin-top: 16px;
+}
+
+.cp-admin .cp-card {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	padding: 20px 22px;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.cp-admin .cp-status {
+	font-weight: 600;
+}
+
+.cp-admin .cp-status--connected {
+	color: #008a20;
+}
+
+.cp-admin .cp-status--disconnected,
+.cp-admin .cp-status--expired,
+.cp-admin .cp-status--error {
+	color: #b32d2e;
+}
+
+.cp-admin .cp-metric {
+	font-size: 28px;
+	margin: 0 0 8px;
+}
+
+.cp-admin .cp-health {
+	margin: 0;
+	padding-left: 18px;
+}
+
+.cp-admin .cp-progress {
+	height: 8px;
+	background: #f0f0f1;
+	border-radius: 999px;
+	overflow: hidden;
+	margin: 12px 0;
+}
+
+.cp-admin .cp-progress span {
+	display: block;
+	height: 100%;
+	background: #2271b1;
+}
+
+.cp-admin .cp-inline-form {
+	display: inline-block;
+	margin-right: 8px;
+}
+
+.cp-admin .cp-avatar-field {
+	display: flex;
+	align-items: flex-start;
+	gap: 16px;
+}
+
+.cp-admin .cp-avatar-preview {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 80px;
+	height: 80px;
+	flex: 0 0 80px;
+	border: 1px solid #dcdcde;
+	border-radius: 50%;
+	background: #f6f7f7;
+	overflow: hidden;
+}
+
+.cp-admin .cp-avatar-preview img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.cp-admin .cp-avatar-empty {
+	font-size: 11px;
+	color: #646970;
+}
+
+.cp-admin .cp-avatar-controls p {
+	margin-top: 0;
+}
+
+/* Conversations inbox */
+
+.cp-inbox {
+	display: grid;
+	grid-template-columns: minmax(240px, 320px) 1fr;
+	gap: 16px;
+	margin-top: 16px;
+	height: calc(100vh - 200px);
+	min-height: 480px;
+}
+
+.cp-inbox__list,
+.cp-inbox__thread {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.cp-inbox__list-head {
+	display: flex;
+	gap: 8px;
+	padding: 10px;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.cp-inbox__list-head select {
+	flex: 1;
+	min-width: 0;
+}
+
+.cp-inbox__items {
+	margin: 0;
+	flex: 1;
+	overflow-y: auto;
+}
+
+.cp-inbox__empty,
+.cp-inbox__placeholder {
+	padding: 16px;
+	color: #646970;
+}
+
+.cp-inbox__item {
+	margin: 0;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.cp-inbox__item.is-active {
+	background: #f0f6fc;
+}
+
+.cp-inbox__item-button {
+	display: block;
+	width: 100%;
+	padding: 10px 12px;
+	border: 0;
+	background: transparent;
+	text-align: left;
+	cursor: pointer;
+}
+
+.cp-inbox__item-button:hover {
+	background: #f6f7f7;
+}
+
+.cp-inbox__item-top {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 4px;
+}
+
+.cp-inbox__visitor {
+	font-weight: 600;
+}
+
+.cp-badge {
+	font-size: 11px;
+	line-height: 1.6;
+	padding: 0 6px;
+	border-radius: 999px;
+	color: #fff;
+}
+
+.cp-badge--human { background: #2271b1; }
+.cp-badge--waiting { background: #b32d2e; }
+
+.cp-inbox__preview {
+	display: block;
+	color: #50575e;
+	font-size: 13px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cp-inbox__meta {
+	display: block;
+	color: #8c8f94;
+	font-size: 11px;
+	margin-top: 2px;
+}
+
+.cp-inbox__thread-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 12px 14px;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.cp-inbox__mode {
+	display: block;
+	font-size: 12px;
+	color: #646970;
+}
+
+.cp-inbox__messages {
+	flex: 1;
+	overflow-y: auto;
+	padding: 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	background: #f6f7f7;
+}
+
+.cp-msg {
+	max-width: 70%;
+	padding: 8px 12px;
+	border-radius: 12px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+}
+
+.cp-msg--user {
+	align-self: flex-start;
+}
+
+.cp-msg--assistant {
+	align-self: flex-end;
+}
+
+.cp-msg--human {
+	background: #2271b1;
+	border-color: #2271b1;
+	color: #fff;
+}
+
+.cp-msg__label {
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	opacity: 0.7;
+	margin-bottom: 2px;
+}
+
+.cp-msg__body {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.cp-msg__time {
+	font-size: 11px;
+	opacity: 0.6;
+	margin-top: 4px;
+}
+
+.cp-inbox__composer {
+	display: flex;
+	gap: 8px;
+	padding: 10px;
+	border-top: 1px solid #dcdcde;
+}
+
+.cp-inbox__composer textarea {
+	flex: 1;
+	resize: none;
+}
+
+@media (max-width: 782px) {
+	.cp-inbox {
+		grid-template-columns: 1fr;
+		height: auto;
+	}
+
+	.cp-inbox__list {
+		max-height: 320px;
+	}
+
+	.cp-inbox__thread {
+		min-height: 420px;
+	}
+}
