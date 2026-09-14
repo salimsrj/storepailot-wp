@@ -22,14 +22,30 @@
 }
 
 .cp-chatbot-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
 	border: 0;
 	border-radius: 999px;
-	background: var(--cp-primary, #2563eb);
-	color: #fff;
-	padding: 12px 18px;
+	background: transparent;
+	color: var(--cp-primary, #2563eb);
+	padding: 10px 14px;
 	font-size: 14px;
+	font-weight: 600;
 	cursor: pointer;
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+	box-shadow: none;
+}
+
+.cp-chatbot-toggle-icon {
+	display: block;
+	flex: 0 0 auto;
+	width: 56px;
+	height: 56px;
+	object-fit: contain;
+}
+
+.cp-chatbot-toggle-label {
+	line-height: 1;
 }
 
 .cp-chatbot-toggle:focus-visible,
@@ -206,8 +222,41 @@
 
 .cp-chatbot-typing {
 	align-self: flex-start;
-	color: var(--cp-muted);
-	font-size: 13px;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 10px 14px;
+	background: var(--cp-assistant);
+	border-radius: 16px;
+}
+
+.cp-chatbot-typing-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--cp-muted);
+	animation: cp-typing-bounce 1.2s infinite ease-in-out;
+}
+
+.cp-chatbot-typing-dot:nth-child(2) {
+	animation-delay: 0.15s;
+}
+
+.cp-chatbot-typing-dot:nth-child(3) {
+	animation-delay: 0.3s;
+}
+
+@keyframes cp-typing-bounce {
+	0%,
+	60%,
+	100% {
+		opacity: 0.35;
+		transform: translateY(0);
+	}
+	30% {
+		opacity: 1;
+		transform: translateY(-3px);
+	}
 }
 
 .cp-chatbot-error {

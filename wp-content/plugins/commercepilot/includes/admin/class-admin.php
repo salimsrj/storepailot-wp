@@ -28,6 +28,7 @@ final class Admin {
 
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'menu' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_menu_badge' ) );
 		add_action( 'admin_enqueue_scripts', array( new Assets( $this->settings ), 'enqueue_admin' ) );
 		add_action( 'admin_post_commercepilot_save_settings', array( $this, 'save_settings' ) );
 		add_action( 'admin_post_commercepilot_connect', array( $this, 'save_connection' ) );
@@ -37,9 +38,12 @@ final class Admin {
 	}
 
 	public function menu(): void {
+		$waiting = $this->waiting_count();
+		$badge   = $this->menu_badge( $waiting );
+
 		add_menu_page(
 			__( 'CommercePilot', 'commercepilot' ),
-			__( 'CommercePilot', 'commercepilot' ),
+			__( 'CommercePilot', 'commercepilot' ) . $badge,
 			'manage_options',
 			'commercepilot',
 			array( $this, 'dashboard' ),
@@ -48,11 +52,85 @@ final class Admin {
 		);
 
 		add_submenu_page( 'commercepilot', __( 'Dashboard', 'commercepilot' ), __( 'Dashboard', 'commercepilot' ), 'manage_options', 'commercepilot', array( $this, 'dashboard' ) );
-		add_submenu_page( 'commercepilot', __( 'Conversations', 'commercepilot' ), __( 'Conversations', 'commercepilot' ), 'manage_options', 'commercepilot-conversations', array( $this, 'conversations_page' ) );
+		add_submenu_page(
+			'commercepilot',
+			__( 'Conversations', 'commercepilot' ),
+			__( 'Conversations', 'commercepilot' ) . $badge,
+			'manage_options',
+			'commercepilot-conversations',
+			array( $this, 'conversations_page' )
+		);
 		add_submenu_page( 'commercepilot', __( 'Settings', 'commercepilot' ), __( 'Settings', 'commercepilot' ), 'manage_options', 'commercepilot-settings', array( $this, 'settings_page' ) );
 		add_submenu_page( 'commercepilot', __( 'Connection', 'commercepilot' ), __( 'Connection', 'commercepilot' ), 'manage_options', 'commercepilot-connection', array( $this, 'connection_page' ) );
 		add_submenu_page( 'commercepilot', __( 'Usage', 'commercepilot' ), __( 'Usage', 'commercepilot' ), 'manage_options', 'commercepilot-usage', array( $this, 'usage_page' ) );
 		add_submenu_page( 'commercepilot', __( 'Account', 'commercepilot' ), __( 'Account', 'commercepilot' ), 'manage_options', 'commercepilot-account', array( $this, 'account_page' ) );
+	}
+
+	/**
+	 * Keep the sidebar badge fresh on every admin screen while connected.
+	 */
+	public function enqueue_menu_badge( string $hook ): void {
+		if ( ! current_user_can( 'manage_options' ) || ! $this->settings->is_connected() ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'commercepilot-menu-badge',
+			COMMERCEPILOT_URL . 'admin/assets/css/menu-badge.css',
+			array(),
+			(string) @filemtime( COMMERCEPILOT_PATH . 'admin/assets/css/menu-badge.css' ) ?: COMMERCEPILOT_VERSION
+		);
+		wp_enqueue_script(
+			'commercepilot-menu-badge',
+			COMMERCEPILOT_URL . 'admin/assets/js/menu-badge.js',
+			array(),
+			(string) @filemtime( COMMERCEPILOT_PATH . 'admin/assets/js/menu-badge.js' ) ?: COMMERCEPILOT_VERSION,
+			true
+		);
+		wp_localize_script(
+			'commercepilot-menu-badge',
+			'commercePilotMenuBadge',
+			array(
+				'restUrl'      => esc_url_raw( rest_url( 'commercepilot/v1/' ) ),
+				'nonce'        => wp_create_nonce( 'wp_rest' ),
+				'waitingCount' => $this->waiting_count(),
+				'intervalMs'   => 30000,
+			)
+		);
+	}
+
+	private function waiting_count(): int {
+		if ( ! $this->api || ! $this->settings->is_connected() ) {
+			return 0;
+		}
+
+		$cached = get_transient( 'commercepilot_waiting_count' );
+		if ( is_numeric( $cached ) ) {
+			return max( 0, (int) $cached );
+		}
+
+		$result = $this->api->conversations_waiting_count();
+		if ( is_wp_error( $result ) ) {
+			return 0;
+		}
+
+		$data  = is_array( $result['data'] ?? null ) ? $result['data'] : $result;
+		$count = absint( $data['waiting_count'] ?? 0 );
+		set_transient( 'commercepilot_waiting_count', $count, 30 );
+
+		return $count;
+	}
+
+	private function menu_badge( int $count ): string {
+		if ( $count < 1 ) {
+			return '';
+		}
+
+		return sprintf(
+			' <span class="awaiting-mod count-%1$d"><span class="pending-count">%2$s</span></span>',
+			$count,
+			esc_html( number_format_i18n( $count ) )
+		);
 	}
 
 	public function dashboard(): void {

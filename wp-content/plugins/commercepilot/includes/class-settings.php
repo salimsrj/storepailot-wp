@@ -39,7 +39,7 @@ final class Settings {
 			'position'                => 'right',
 			'theme'                   => 'light',
 			'primary_color'           => '#2563eb',
-			'button_text'             => 'Chat with us',
+			'button_text'             => 'Chat',
 			'avatar'                  => '',
 			'avatar_id'               => 0,
 			'avatar_in_messages'      => true,

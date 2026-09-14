@@ -225,9 +225,17 @@
 		windowEl.appendChild(messages);
 		windowEl.appendChild(composer);
 
-		var toggle = el('button', 'cp-chatbot-toggle', cfg.config.button_text || 'Chat with us');
+		var toggle = el('button', 'cp-chatbot-toggle');
 		toggle.type = 'button';
 		toggle.setAttribute('aria-label', (cfg.i18n && cfg.i18n.open) || 'Open chat');
+		var icon = el('img', 'cp-chatbot-toggle-icon');
+		icon.src = cfg.iconUrl || '';
+		icon.alt = '';
+		icon.width = 56;
+		icon.height = 56;
+		icon.setAttribute('aria-hidden', 'true');
+		toggle.appendChild(icon);
+		toggle.appendChild(el('span', 'cp-chatbot-toggle-label', cfg.config.button_text || 'Chat'));
 		toggle.addEventListener('click', openChat);
 
 		root.appendChild(windowEl);
@@ -276,7 +284,13 @@
 			box.appendChild(item.role === 'assistant' ? withAvatar(bubble) : bubble);
 		});
 		if (state.isLoading) {
-			box.appendChild(withAvatar(el('div', 'cp-chatbot-typing', '…')));
+			var typing = el('div', 'cp-chatbot-typing');
+			typing.setAttribute('aria-label', 'Assistant is typing');
+			typing.setAttribute('role', 'status');
+			typing.appendChild(el('span', 'cp-chatbot-typing-dot'));
+			typing.appendChild(el('span', 'cp-chatbot-typing-dot'));
+			typing.appendChild(el('span', 'cp-chatbot-typing-dot'));
+			box.appendChild(withAvatar(typing));
 		}
 		box.scrollTop = box.scrollHeight;
 	}

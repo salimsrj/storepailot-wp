@@ -62,6 +62,29 @@ final class ConversationController {
 		);
 	}
 
+	public function waiting_count( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$guard = $this->guard( $request );
+		if ( is_wp_error( $guard ) ) {
+			return $guard;
+		}
+
+		$result = $this->api->conversations_waiting_count();
+		if ( is_wp_error( $result ) ) {
+			return $this->error_response( $result );
+		}
+
+		$data  = is_array( $result['data'] ?? null ) ? $result['data'] : $result;
+		$count = absint( $data['waiting_count'] ?? 0 );
+		set_transient( 'commercepilot_waiting_count', $count, 30 );
+
+		return new WP_REST_Response(
+			array(
+				'waiting_count' => $count,
+			),
+			200
+		);
+	}
+
 	public function show( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$guard = $this->guard( $request );
 		if ( is_wp_error( $guard ) ) {

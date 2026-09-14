@@ -1,0 +1,17 @@
+/* Waiting-message counter in the admin sidebar. */
+#adminmenu #toplevel_page_commercepilot .awaiting-mod,
+#adminmenu #toplevel_page_commercepilot .awaiting-mod .pending-count,
+#adminmenu #toplevel_page_commercepilot .update-plugins,
+#adminmenu #toplevel_page_commercepilot .update-plugins .plugin-count {
+	background-color: #d63638;
+	color: #fff;
+}
+
+#adminmenu #toplevel_page_commercepilot li.current a .awaiting-mod,
+#adminmenu #toplevel_page_commercepilot li a:hover .awaiting-mod,
+#adminmenu #toplevel_page_commercepilot li a:focus .awaiting-mod,
+#adminmenu #toplevel_page_commercepilot.wp-has-current-submenu .awaiting-mod,
+#adminmenu #toplevel_page_commercepilot.current .awaiting-mod {
+	background-color: #d63638;
+	color: #fff;
+}

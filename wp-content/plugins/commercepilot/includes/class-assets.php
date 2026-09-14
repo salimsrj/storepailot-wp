@@ -132,10 +132,11 @@ final class Assets {
 			'commercepilot-chatbot',
 			'commercePilot',
 			array(
-				'restUrl' => esc_url_raw( rest_url( 'commercepilot/v1/' ) ),
-				'nonce'   => wp_create_nonce( 'wp_rest' ),
-				'config'  => $this->settings->public_config(),
-				'i18n'    => array(
+				'restUrl'  => esc_url_raw( rest_url( 'commercepilot/v1/' ) ),
+				'nonce'    => wp_create_nonce( 'wp_rest' ),
+				'config'   => $this->settings->public_config(),
+				'iconUrl'  => esc_url_raw( COMMERCEPILOT_URL . 'public/assets/images/chat-toggle.png?v=' . self::version( 'public/assets/images/chat-toggle.png' ) ),
+				'i18n'     => array(
 					'unavailable' => __( 'Sorry, the assistant is temporarily unavailable. Please try again.', 'commercepilot' ),
 					'upgrade'     => __( 'Your free monthly messages are finished.', 'commercepilot' ),
 					'upgradeCta'  => __( 'Upgrade Plan', 'commercepilot' ),

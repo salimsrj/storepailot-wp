@@ -279,6 +279,15 @@ final class Rest {
 		);
 		register_rest_route(
 			self::NAMESPACE,
+			'/admin/conversations/waiting-count',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $conversations, 'waiting_count' ),
+				'permission_callback' => $admin,
+			)
+		);
+		register_rest_route(
+			self::NAMESPACE,
 			'/admin/conversations/' . $uuid_pattern,
 			array(
 				'methods'             => 'GET',

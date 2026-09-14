@@ -37,6 +37,13 @@ final class ApiClient {
 	}
 
 	/**
+	 * @return array<string, mixed>|\WP_Error
+	 */
+	public function conversations_waiting_count(): array|\WP_Error {
+		return $this->request( 'GET', '/api/v1/conversations/waiting-count', array(), array( 'auth' => true, 'hmac' => true ) );
+	}
+
+	/**
 	 * @param array<string, mixed> $args
 	 * @return array<string, mixed>|\WP_Error
 	 */

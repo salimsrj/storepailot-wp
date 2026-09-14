@@ -1,0 +1,7 @@
+2026-09-12T05:21:20+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":503}
+2026-09-12T10:25:45+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/conversations?per_page=25","status":401}
+2026-09-12T10:27:37+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":503}
+2026-09-12T10:45:15+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/conversations?per_page=25","status":401}
+2026-09-12T10:49:25+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/conversations\/3ba03ca5-a9b6-4da5-a87f-8cf46b45239d\/messages?visitor_id=0a0f751a-3dfa-40db-926d-c611cf99b5fd","status":401}
+2026-09-12T10:49:59+00:00 ERROR Laravel request failed {"path":"\/api\/v1\/conversations\/3ba03ca5-a9b6-4da5-a87f-8cf46b45239d\/messages?visitor_id=0a0f751a-3dfa-40db-926d-c611cf99b5fd&after_id=16","code":"http_request_failed"}
+2026-09-12T10:50:54+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/conversations\/3ba03ca5-a9b6-4da5-a87f-8cf46b45239d\/messages?visitor_id=0a0f751a-3dfa-40db-926d-c611cf99b5fd&after_id=16","status":401}
