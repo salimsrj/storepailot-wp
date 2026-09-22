@@ -33,7 +33,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</tr>
 			<tr>
 				<th><label for="cp-welcome"><?php esc_html_e( 'Welcome message', 'commercepilot' ); ?></label></th>
-				<td><textarea class="large-text" id="cp-welcome" name="welcome_message" rows="3"><?php echo esc_textarea( (string) $settings['welcome_message'] ); ?></textarea></td>
+				<td>
+					<textarea class="large-text" id="cp-welcome" name="welcome_message" rows="3"><?php echo esc_textarea( (string) $settings['welcome_message'] ); ?></textarea>
+					<p class="description"><?php esc_html_e( 'Shown with a sound and unread badge the first time a visitor sees the chat button. Use {assistant_name} to insert the name above.', 'commercepilot' ); ?></p>
+				</td>
 			</tr>
 			<tr>
 				<th><label for="cp-language"><?php esc_html_e( 'Language', 'commercepilot' ); ?></label></th>

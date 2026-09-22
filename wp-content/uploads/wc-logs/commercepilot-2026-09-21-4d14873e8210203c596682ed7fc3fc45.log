@@ -1,0 +1,19 @@
+2026-09-21T04:43:10+00:00 ERROR Laravel request failed {"path":"\/api\/v1\/conversations\/438554c2-0e96-4349-a8d3-7b4715cd26fa\/messages?visitor_id=8d311587-10b1-497c-8b88-9498c906da5f","code":"http_request_failed"}
+2026-09-21T04:43:19+00:00 ERROR Laravel request failed {"path":"\/api\/v1\/conversations\/438554c2-0e96-4349-a8d3-7b4715cd26fa\/messages?visitor_id=8d311587-10b1-497c-8b88-9498c906da5f","code":"http_request_failed"}
+2026-09-21T04:43:24+00:00 ERROR Laravel request failed {"path":"\/api\/v1\/chat","code":"http_request_failed"}
+2026-09-21T04:43:24+00:00 ERROR Laravel request failed {"path":"\/api\/v1\/conversations\/438554c2-0e96-4349-a8d3-7b4715cd26fa\/messages?visitor_id=8d311587-10b1-497c-8b88-9498c906da5f","code":"http_request_failed"}
+2026-09-21T04:43:29+00:00 ERROR Laravel request failed {"path":"\/api\/v1\/conversations\/438554c2-0e96-4349-a8d3-7b4715cd26fa\/messages?visitor_id=8d311587-10b1-497c-8b88-9498c906da5f","code":"http_request_failed"}
+2026-09-21T04:45:50+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":503}
+2026-09-21T04:45:50+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/conversations\/438554c2-0e96-4349-a8d3-7b4715cd26fa\/messages?visitor_id=8d311587-10b1-497c-8b88-9498c906da5f&after_id=33","status":401}
+2026-09-21T05:02:41+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":503}
+2026-09-21T05:02:54+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/conversations\/438554c2-0e96-4349-a8d3-7b4715cd26fa\/messages?visitor_id=8d311587-10b1-497c-8b88-9498c906da5f&after_id=37","status":401}
+2026-09-21T05:23:42+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/conversations\/0a2ed520-30c8-4beb-b6f1-8d3f1f09b5a7\/messages?visitor_id=a6e33bb5-c131-4721-9f74-2e382c5cb98c","status":404}
+2026-09-21T06:12:24+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/conversations\/waiting-count","status":401}
+2026-09-21T06:41:51+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":503}
+2026-09-21T06:42:02+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":502}
+2026-09-21T06:42:23+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":503}
+2026-09-21T06:42:58+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":503}
+2026-09-21T06:49:06+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":503}
+2026-09-21T06:49:06+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/conversations\/438554c2-0e96-4349-a8d3-7b4715cd26fa\/messages?visitor_id=8d311587-10b1-497c-8b88-9498c906da5f&after_id=48","status":401}
+2026-09-21T10:01:56+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/chat","status":503}
+2026-09-21T10:02:42+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/conversations\/waiting-count","status":401}

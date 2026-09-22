@@ -10,6 +10,8 @@
 	var Storage = {
 		visitorKey: 'commercepilot_visitor_id',
 		conversationKey: 'commercepilot_conversation_id',
+		welcomeKey: 'commercepilot_welcome_delivered',
+		unreadKey: 'commercepilot_unread_count',
 		getVisitor: function () {
 			var id = localStorage.getItem(this.visitorKey);
 			if (!id) {
@@ -25,6 +27,28 @@
 			if (id) {
 				localStorage.setItem(this.conversationKey, id);
 			}
+		},
+		clearConversation: function () {
+			localStorage.removeItem(this.conversationKey);
+		},
+		hasDeliveredWelcome: function () {
+			return localStorage.getItem(this.welcomeKey) === '1';
+		},
+		markWelcomeDelivered: function () {
+			localStorage.setItem(this.welcomeKey, '1');
+		},
+		getUnread: function () {
+			var value = parseInt(sessionStorage.getItem(this.unreadKey) || '0', 10);
+			return isNaN(value) || value < 0 ? 0 : value;
+		},
+		setUnread: function (count) {
+			var value = Math.max(0, parseInt(count, 10) || 0);
+			if (value === 0) {
+				sessionStorage.removeItem(this.unreadKey);
+			} else {
+				sessionStorage.setItem(this.unreadKey, String(value));
+			}
+			return value;
 		},
 		uuid: function () {
 			if (window.crypto && typeof window.crypto.randomUUID === 'function') {
@@ -50,7 +74,11 @@
 		mode: 'ai',
 		lastMessageId: 0,
 		pollTimer: null,
-		historyLoaded: false
+		historyLoaded: false,
+		unread: Storage.getUnread(),
+		notifyAudio: null,
+		pendingNotifySound: false,
+		notifyUnlockArmed: false
 	};
 
 	function restHref(path, query) {
@@ -236,6 +264,10 @@
 		icon.setAttribute('aria-hidden', 'true');
 		toggle.appendChild(icon);
 		toggle.appendChild(el('span', 'cp-chatbot-toggle-label', cfg.config.button_text || 'Chat'));
+		var badge = el('span', 'cp-chatbot-badge');
+		badge.hidden = true;
+		badge.setAttribute('aria-live', 'polite');
+		toggle.appendChild(badge);
 		toggle.addEventListener('click', openChat);
 
 		root.appendChild(windowEl);
@@ -243,11 +275,278 @@
 		root._messages = messages;
 		root._input = input;
 		root._send = send;
+		root._toggle = toggle;
+		root._badge = badge;
 
-		if (cfg.config.welcome_message) {
-			state.messages.push({ role: 'assistant', content: cfg.config.welcome_message });
-		}
+		deliverWelcome();
+		paintBadge();
 		paintMessages();
+	}
+
+	/**
+	 * First visit: queue the configured greeting, bump the unread badge, and
+	 * play a soft chime as soon as the page loads. Incognito/private windows
+	 * block autoplay, so if that fails we play on the next user gesture
+	 * (pointerdown) — still before the chat panel opens.
+	 */
+	function deliverWelcome() {
+		var welcome = resolveWelcome();
+		if (!welcome) {
+			return;
+		}
+
+		state.messages.push({ role: 'assistant', content: welcome, id: 'welcome' });
+
+		if (Storage.hasDeliveredWelcome()) {
+			return;
+		}
+
+		Storage.markWelcomeDelivered();
+		bumpUnread(1, false);
+
+		// Warm the audio element early so the first play() is as fast as possible.
+		state.notifyAudio = buildNotifyAudio();
+
+		var play = function () {
+			if (state.isOpen) {
+				return;
+			}
+			playNotifySound();
+		};
+
+		if (document.readyState === 'complete') {
+			window.setTimeout(play, 300);
+		} else {
+			window.addEventListener('load', function () {
+				window.setTimeout(play, 300);
+			}, { once: true });
+		}
+	}
+
+	function resolveWelcome() {
+		var welcome = (cfg.config.welcome_message || '').trim();
+		if (!welcome) {
+			return '';
+		}
+		return welcome.replace(/\{assistant_name\}/gi, assistantName());
+	}
+
+	function bumpUnread(count, withSound) {
+		if (state.isOpen) {
+			return;
+		}
+		state.unread = Storage.setUnread(state.unread + (count || 1));
+		paintBadge();
+		if (withSound) {
+			playNotifySound();
+		}
+	}
+
+	function clearUnread() {
+		state.unread = Storage.setUnread(0);
+		paintBadge();
+	}
+
+	function paintBadge() {
+		var badge = root._badge;
+		if (!badge) {
+			return;
+		}
+		if (state.unread > 0 && !state.isOpen) {
+			badge.hidden = false;
+			badge.textContent = state.unread > 99 ? '99+' : String(state.unread);
+			badge.setAttribute('aria-label', state.unread + ' unread messages');
+			badge.classList.toggle('is-pending-sound', state.pendingNotifySound);
+		} else {
+			badge.hidden = true;
+			badge.textContent = '';
+			badge.removeAttribute('aria-label');
+			badge.classList.remove('is-pending-sound');
+		}
+	}
+
+	/**
+	 * Soft chime. Tries immediately (page load). If the browser blocks autoplay
+	 * (common in Incognito), queues the sound for the next real user gesture.
+	 */
+	function playNotifySound() {
+		if (state.isOpen) {
+			return;
+		}
+
+		try {
+			var audio = state.notifyAudio || buildNotifyAudio();
+			state.notifyAudio = audio;
+			audio.currentTime = 0;
+			var result = audio.play();
+			if (result && typeof result.then === 'function') {
+				result.then(function () {
+					state.pendingNotifySound = false;
+					disarmNotifyUnlock();
+					paintBadge();
+				}).catch(function () {
+					queueNotifySound();
+				});
+				return;
+			}
+			state.pendingNotifySound = false;
+			disarmNotifyUnlock();
+		} catch (err) {
+			queueNotifySound();
+		}
+	}
+
+	function queueNotifySound() {
+		state.pendingNotifySound = true;
+		paintBadge();
+		armNotifyUnlock();
+	}
+
+	/**
+	 * Incognito/private mode requires a user gesture. Capture-phase listeners
+	 * run before the chat toggle's click handler, so the chime can still fire
+	 * on page interaction without waiting until the inbox is open.
+	 */
+	function armNotifyUnlock() {
+		if (state.notifyUnlockArmed) {
+			return;
+		}
+		state.notifyUnlockArmed = true;
+		window.addEventListener('pointerdown', flushNotifySound, true);
+		window.addEventListener('keydown', flushNotifySound, true);
+		window.addEventListener('touchstart', flushNotifySound, true);
+	}
+
+	function disarmNotifyUnlock() {
+		if (!state.notifyUnlockArmed) {
+			return;
+		}
+		state.notifyUnlockArmed = false;
+		window.removeEventListener('pointerdown', flushNotifySound, true);
+		window.removeEventListener('keydown', flushNotifySound, true);
+		window.removeEventListener('touchstart', flushNotifySound, true);
+	}
+
+	function flushNotifySound() {
+		if (!state.pendingNotifySound || state.isOpen) {
+			return;
+		}
+
+		state.pendingNotifySound = false;
+		disarmNotifyUnlock();
+		paintBadge();
+
+		try {
+			var audio = state.notifyAudio || buildNotifyAudio();
+			state.notifyAudio = audio;
+			audio.currentTime = 0;
+			var result = audio.play();
+			if (result && typeof result.catch === 'function') {
+				result.catch(function () {
+					playWebAudioChime();
+				});
+			}
+		} catch (err) {
+			playWebAudioChime();
+		}
+	}
+
+	function playWebAudioChime() {
+		try {
+			var Ctx = window.AudioContext || window.webkitAudioContext;
+			if (!Ctx) {
+				return;
+			}
+			var ctx = new Ctx();
+			var play = function () {
+				var now = ctx.currentTime;
+				function tone(freq, start, duration) {
+					var osc = ctx.createOscillator();
+					var gain = ctx.createGain();
+					osc.type = 'sine';
+					osc.frequency.value = freq;
+					gain.gain.setValueAtTime(0.0001, start);
+					gain.gain.exponentialRampToValueAtTime(0.08, start + 0.02);
+					gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+					osc.connect(gain);
+					gain.connect(ctx.destination);
+					osc.start(start);
+					osc.stop(start + duration + 0.02);
+				}
+				tone(880, now, 0.12);
+				tone(1174.7, now + 0.12, 0.18);
+				window.setTimeout(function () {
+					if (ctx.state !== 'closed') {
+						ctx.close();
+					}
+				}, 500);
+			};
+			if (ctx.state === 'suspended') {
+				ctx.resume().then(play).catch(function () {});
+			} else {
+				play();
+			}
+		} catch (err) {
+			// ignore
+		}
+	}
+
+	/**
+	 * Tiny two-beep WAV encoded as a data URI — no external file needed.
+	 */
+	function buildNotifyAudio() {
+		var sampleRate = 22050;
+		var duration = 0.32;
+		var samples = Math.floor(sampleRate * duration);
+		var dataSize = samples * 2;
+		var buffer = new ArrayBuffer(44 + dataSize);
+		var view = new DataView(buffer);
+
+		function writeString(offset, value) {
+			for (var i = 0; i < value.length; i++) {
+				view.setUint8(offset + i, value.charCodeAt(i));
+			}
+		}
+
+		writeString(0, 'RIFF');
+		view.setUint32(4, 36 + dataSize, true);
+		writeString(8, 'WAVE');
+		writeString(12, 'fmt ');
+		view.setUint32(16, 16, true);
+		view.setUint16(20, 1, true);
+		view.setUint16(22, 1, true);
+		view.setUint32(24, sampleRate, true);
+		view.setUint32(28, sampleRate * 2, true);
+		view.setUint16(32, 2, true);
+		view.setUint16(34, 16, true);
+		writeString(36, 'data');
+		view.setUint32(40, dataSize, true);
+
+		for (var i = 0; i < samples; i++) {
+			var t = i / sampleRate;
+			var envelope = 0;
+			var freq = 880;
+			if (t < 0.14) {
+				envelope = Math.sin((Math.PI * t) / 0.14);
+				freq = 880;
+			} else if (t > 0.16 && t < 0.32) {
+				envelope = Math.sin((Math.PI * (t - 0.16)) / 0.16);
+				freq = 1175;
+			}
+			var sample = Math.max(-1, Math.min(1, Math.sin(2 * Math.PI * freq * t) * envelope * 0.35));
+			view.setInt16(44 + i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+		}
+
+		var bytes = new Uint8Array(buffer);
+		var binary = '';
+		for (var j = 0; j < bytes.length; j++) {
+			binary += String.fromCharCode(bytes[j]);
+		}
+
+		var audio = new Audio('data:audio/wav;base64,' + btoa(binary));
+		audio.preload = 'auto';
+		audio.volume = 0.85;
+		return audio;
 	}
 
 	function paintMessages() {
@@ -502,7 +801,7 @@
 	}
 
 	function startPolling() {
-		if (state.pollTimer || !state.conversationId || !state.isOpen) {
+		if (state.pollTimer || !state.conversationId) {
 			return;
 		}
 		state.pollTimer = window.setInterval(function () {
@@ -530,6 +829,7 @@
 				var json = result.json || {};
 				var incoming = json.messages || [];
 				var rendered = [];
+				var unreadDelta = 0;
 
 				incoming.forEach(function (message) {
 					trackMessageId(message.id);
@@ -543,6 +843,9 @@
 					// already on screen, so only agent replies are rendered.
 					if (message.role === 'assistant' || includeUser) {
 						rendered.push({ role: message.role, content: message.content, id: message.id });
+						if (!state.isOpen && message.role === 'assistant') {
+							unreadDelta += 1;
+						}
 					}
 				});
 
@@ -553,12 +856,16 @@
 				if (includeUser && rendered.length) {
 					// Replace the standalone welcome message with the real thread.
 					state.messages = rendered;
-				} else {
+				} else if (rendered.length) {
 					state.messages = state.messages.concat(rendered);
 				}
 
 				var before = state.mode;
 				applyMode(json.mode);
+
+				if (unreadDelta > 0) {
+					bumpUnread(unreadDelta, true);
+				}
 
 				if (rendered.length || before !== state.mode) {
 					paintMessages();
@@ -572,6 +879,7 @@
 	function openChat() {
 		state.isOpen = true;
 		root.classList.add('is-open');
+		clearUnread();
 
 		// First open of a returning visitor: pull the thread back so replies
 		// sent while they were away are not lost.
@@ -588,7 +896,14 @@
 	function closeChat() {
 		state.isOpen = false;
 		root.classList.remove('is-open');
-		stopPolling();
+		// Keep polling while a human agent owns the thread so new replies can
+		// land on the launcher badge even when the panel is closed.
+		if (state.mode === 'human' && state.conversationId) {
+			startPolling();
+		} else {
+			stopPolling();
+		}
+		paintBadge();
 	}
 
 	document.addEventListener('keydown', function (event) {

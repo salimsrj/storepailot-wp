@@ -22,6 +22,7 @@
 }
 
 .cp-chatbot-toggle {
+	position: relative;
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
@@ -46,6 +47,37 @@
 
 .cp-chatbot-toggle-label {
 	line-height: 1;
+}
+
+.cp-chatbot-badge {
+	position: absolute;
+	top: 2px;
+	right: 2px;
+	min-width: 20px;
+	height: 20px;
+	padding: 0 6px;
+	border-radius: 999px;
+	background: #d63638;
+	color: #fff;
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 20px;
+	text-align: center;
+	box-shadow: 0 0 0 2px #fff;
+	pointer-events: none;
+}
+
+.cp-chatbot-badge[hidden] {
+	display: none !important;
+}
+
+.cp-chatbot-badge.is-pending-sound {
+	animation: cp-badge-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes cp-badge-pulse {
+	0%, 100% { transform: scale(1); }
+	50% { transform: scale(1.12); }
 }
 
 .cp-chatbot-toggle:focus-visible,

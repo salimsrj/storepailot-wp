@@ -27,8 +27,8 @@ final class Settings {
 			'site_secret'             => '',
 			'api_url'                 => COMMERCEPILOT_API_URL,
 			'enabled'                 => true,
-			'assistant_name'          => 'CommercePilot',
-			'welcome_message'         => 'Hi! I can help you find products and add them to your cart.',
+			'assistant_name'          => 'Lora',
+			'welcome_message'         => 'Hello! I am Lora, your shopping assistant. How can I help you?',
 			'language'                => 'en',
 			'tone'                    => 'helpful',
 			'product_search'          => true,
@@ -69,7 +69,19 @@ final class Settings {
 			return;
 		}
 
-		update_option( self::OPTION_KEY, array_merge( self::defaults(), $current ), false );
+		$merged = array_merge( self::defaults(), $current );
+
+		// Soft-migrate the stock greeting when the store still has the original
+		// placeholder copy, so the new first-visit notification text shows up.
+		$legacy_welcome = 'Hi! I can help you find products and add them to your cart.';
+		if ( ( $current['welcome_message'] ?? '' ) === $legacy_welcome ) {
+			$merged['welcome_message'] = self::defaults()['welcome_message'];
+		}
+		if ( ( $current['assistant_name'] ?? '' ) === 'CommercePilot' ) {
+			$merged['assistant_name'] = self::defaults()['assistant_name'];
+		}
+
+		update_option( self::OPTION_KEY, $merged, false );
 	}
 
 	/**
