@@ -1,0 +1,4 @@
+2026-09-24T10:04:05+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/conversations\/waiting-count","status":401}
+2026-09-24T10:04:05+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/conversations?per_page=25","status":401}
+2026-09-24T10:06:07+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/conversations\/438554c2-0e96-4349-a8d3-7b4715cd26fa\/release","status":422}
+2026-09-24T10:13:00+00:00 WARNING Laravel returned an error status {"path":"\/api\/v1\/conversations\/waiting-count","status":401}

@@ -74,6 +74,8 @@ final class Connection {
 		}
 
 		$this->sync_store_meta();
+		$this->sync_assistant_settings();
+		$this->refresh_agent_capability();
 		return $site;
 	}
 
@@ -134,11 +136,75 @@ final class Connection {
 			'enable_cart'             => (bool) $this->settings->get( 'cart' ),
 			'enable_checkout'         => (bool) $this->settings->get( 'checkout' ),
 			'enable_order_tracking'   => (bool) $this->settings->get( 'order_tracking' ),
+			'enable_agent'            => (bool) $this->settings->get( 'agent_mode' ),
 		);
 
 		$result = $this->api->update_site_settings( $payload );
 		if ( is_wp_error( $result ) ) {
 			Logger::warning( 'Failed to sync assistant settings', array( 'code' => $result->get_error_code() ) );
 		}
+	}
+
+	/**
+	 * Pull Agent Mode / subscription flags from Laravel into local settings.
+	 *
+	 * @return array{enable_agent:bool,can_enable_agent:bool,subscription:?array<string,mixed>}
+	 */
+	public function refresh_agent_capability(): array {
+		$defaults = array(
+			'enable_agent'     => (bool) $this->settings->get( 'agent_mode' ),
+			'can_enable_agent' => false,
+			'subscription'     => null,
+		);
+
+		$site = $this->api->site();
+		if ( is_wp_error( $site ) ) {
+			return $defaults;
+		}
+
+		$data = is_array( $site['data'] ?? null ) ? $site['data'] : $site;
+		$enable_agent = (bool) ( $data['enable_agent'] ?? false );
+		$can_enable   = (bool) ( $data['can_enable_agent'] ?? false );
+
+		$this->settings->update(
+			array(
+				'agent_mode' => $enable_agent,
+			)
+		);
+
+		return array(
+			'enable_agent'     => $enable_agent,
+			'can_enable_agent' => $can_enable,
+			'subscription'     => is_array( $data['subscription'] ?? null ) ? $data['subscription'] : null,
+		);
+	}
+
+	/**
+	 * Persist Agent Mode locally and sync to Laravel.
+	 *
+	 * @return true|\WP_Error
+	 */
+	public function set_agent_mode( bool $enabled ): true|\WP_Error {
+		$capability = $this->refresh_agent_capability();
+
+		if ( $enabled && ! $capability['can_enable_agent'] ) {
+			return new \WP_Error(
+				'commercepilot_agent_subscription_required',
+				__( 'An active CommercePilot subscription is required to enable Agent Mode.', 'commercepilot' )
+			);
+		}
+
+		$this->settings->update( array( 'agent_mode' => $enabled ) );
+		$this->sync_assistant_settings();
+
+		$synced = $this->refresh_agent_capability();
+		if ( $enabled && ! $synced['enable_agent'] ) {
+			return new \WP_Error(
+				'commercepilot_agent_sync_failed',
+				__( 'Could not enable Agent Mode. Check your subscription and try again.', 'commercepilot' )
+			);
+		}
+
+		return true;
 	}
 }

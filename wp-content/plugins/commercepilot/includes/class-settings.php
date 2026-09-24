@@ -27,6 +27,7 @@ final class Settings {
 			'site_secret'             => '',
 			'api_url'                 => COMMERCEPILOT_API_URL,
 			'enabled'                 => true,
+			'agent_mode'              => false,
 			'assistant_name'          => 'Lora',
 			'welcome_message'         => 'Hello! I am Lora, your shopping assistant. How can I help you?',
 			'language'                => 'en',
@@ -201,6 +202,9 @@ final class Settings {
 		}
 		if ( isset( $values['enabled'] ) ) {
 			$clean['enabled'] = (bool) $values['enabled'];
+		}
+		if ( isset( $values['agent_mode'] ) ) {
+			$clean['agent_mode'] = (bool) $values['agent_mode'];
 		}
 		if ( isset( $values['assistant_name'] ) ) {
 			$clean['assistant_name'] = sanitize_text_field( (string) $values['assistant_name'] );

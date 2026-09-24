@@ -98,9 +98,10 @@ final class Assets {
 			'commercepilot-inbox',
 			'commercePilotInbox',
 			array(
-				'restUrl' => esc_url_raw( rest_url( 'commercepilot/v1/' ) ),
-				'nonce'   => wp_create_nonce( 'wp_rest' ),
-				'i18n'    => array(
+				'restUrl'   => esc_url_raw( rest_url( 'commercepilot/v1/' ) ),
+				'nonce'     => wp_create_nonce( 'wp_rest' ),
+				'agentMode' => (bool) $this->settings->get( 'agent_mode' ),
+				'i18n'      => array(
 					'loading'          => __( 'Loading…', 'commercepilot' ),
 					'failed'           => __( 'Request failed. Please try again.', 'commercepilot' ),
 					'noConversations'  => __( 'No conversations yet.', 'commercepilot' ),
@@ -113,6 +114,7 @@ final class Assets {
 					'release'          => __( 'Give back to AI', 'commercepilot' ),
 					'modeHuman'        => __( 'You are handling this chat. The AI is off.', 'commercepilot' ),
 					'modeAi'           => __( 'The AI is answering this chat.', 'commercepilot' ),
+					'modeDirect'       => __( 'Direct messaging. Reply to the visitor here.', 'commercepilot' ),
 					'replyPlaceholder' => __( 'Write a reply…', 'commercepilot' ),
 					'takeOverFirst'    => __( 'Take over this chat to reply manually.', 'commercepilot' ),
 					'send'             => __( 'Send', 'commercepilot' ),

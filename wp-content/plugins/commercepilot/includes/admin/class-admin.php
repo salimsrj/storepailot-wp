@@ -32,6 +32,7 @@ final class Admin {
 		add_action( 'admin_enqueue_scripts', array( new Assets( $this->settings ), 'enqueue_admin' ) );
 		add_action( 'admin_post_commercepilot_save_settings', array( $this, 'save_settings' ) );
 		add_action( 'admin_post_commercepilot_connect', array( $this, 'save_connection' ) );
+		add_action( 'admin_post_commercepilot_agent_mode', array( $this, 'save_agent_mode' ) );
 		add_action( 'admin_post_commercepilot_disconnect', array( $this, 'disconnect' ) );
 		add_action( 'admin_post_commercepilot_test', array( $this, 'test_connection' ) );
 		add_action( 'admin_post_commercepilot_rotate', array( $this, 'rotate' ) );
@@ -215,6 +216,23 @@ final class Admin {
 		);
 
 		$query = is_wp_error( $result ) ? 'error=1' : 'connected=1';
+		wp_safe_redirect( admin_url( 'admin.php?page=commercepilot-connection&' . $query ) );
+		exit;
+	}
+
+	public function save_agent_mode(): void {
+		$this->guard();
+		check_admin_referer( 'commercepilot_agent_mode' );
+
+		if ( ! $this->connection || ! $this->settings->is_connected() ) {
+			wp_safe_redirect( admin_url( 'admin.php?page=commercepilot-connection&error=1' ) );
+			exit;
+		}
+
+		$enabled = isset( $_POST['agent_mode'] ) && (string) wp_unslash( $_POST['agent_mode'] ) === '1';
+		$result  = $this->connection->set_agent_mode( $enabled );
+
+		$query = is_wp_error( $result ) ? 'agent=fail' : 'agent=ok';
 		wp_safe_redirect( admin_url( 'admin.php?page=commercepilot-connection&' . $query ) );
 		exit;
 	}

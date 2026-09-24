@@ -31,6 +31,17 @@ final class ConnectionPage {
 		$status  = $this->connection ? $this->connection->status() : array( 'status' => 'disconnected', 'label' => __( 'Not Connected', 'commercepilot' ) );
 		$site_id = (string) $this->settings->get( 'site_id' );
 		$masked  = $site_id === '' ? '' : ( strlen( $site_id ) <= 8 ? $site_id : substr( $site_id, 0, 4 ) . '…' . substr( $site_id, -4 ) );
+
+		$agent = array(
+			'enable_agent'     => (bool) $this->settings->get( 'agent_mode' ),
+			'can_enable_agent' => false,
+			'subscription'     => null,
+		);
+
+		if ( $this->connection && $this->settings->is_connected() ) {
+			$agent = $this->connection->refresh_agent_capability();
+		}
+
 		include COMMERCEPILOT_PATH . 'admin/views/connection.php';
 	}
 }

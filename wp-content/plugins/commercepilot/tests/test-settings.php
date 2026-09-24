@@ -27,6 +27,8 @@ $defaults_file = file_get_contents( dirname( __DIR__ ) . '/includes/class-settin
 cp_settings_assert( is_string( $defaults_file ) && str_contains( $defaults_file, 'site_token' ), 'settings store includes site_token' );
 cp_settings_assert( str_contains( (string) $defaults_file, 'site_secret' ), 'settings store includes site_secret' );
 cp_settings_assert( str_contains( (string) $defaults_file, 'api_url' ), 'settings store includes api_url' );
+cp_settings_assert( str_contains( (string) $defaults_file, "'agent_mode'" ), 'settings defaults include agent_mode' );
+cp_settings_assert( str_contains( (string) file_get_contents( dirname( __DIR__ ) . '/includes/class-connection.php' ), 'enable_agent' ), 'connection sync includes enable_agent' );
 cp_settings_assert( ! str_contains( (string) file_get_contents( dirname( __DIR__ ) . '/includes/class-assets.php' ), 'site_token' ), 'assets do not localize site_token' );
 cp_settings_assert( ! str_contains( (string) file_get_contents( dirname( __DIR__ ) . '/includes/class-assets.php' ), 'site_secret' ), 'assets do not localize site_secret' );
 cp_settings_assert( ! str_contains( (string) file_get_contents( dirname( __DIR__ ) . '/public/assets/js/chatbot.js' ), 'openai' ), 'frontend JS does not mention OpenAI' );

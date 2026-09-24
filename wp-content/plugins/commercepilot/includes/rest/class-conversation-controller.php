@@ -143,6 +143,11 @@ final class ConversationController {
 			return $guard;
 		}
 
+		$agent_guard = $this->require_agent_mode();
+		if ( is_wp_error( $agent_guard ) ) {
+			return $agent_guard;
+		}
+
 		$uuid = $this->uuid( $request );
 		if ( is_wp_error( $uuid ) ) {
 			return $uuid;
@@ -161,6 +166,11 @@ final class ConversationController {
 		$guard = $this->guard( $request );
 		if ( is_wp_error( $guard ) ) {
 			return $guard;
+		}
+
+		$agent_guard = $this->require_agent_mode();
+		if ( is_wp_error( $agent_guard ) ) {
+			return $agent_guard;
 		}
 
 		$uuid = $this->uuid( $request );
@@ -209,6 +219,18 @@ final class ConversationController {
 
 		if ( ! $this->settings->is_connected() ) {
 			return new WP_Error( 'commercepilot_not_connected', __( 'CommercePilot is not connected.', 'commercepilot' ), array( 'status' => 503 ) );
+		}
+
+		return true;
+	}
+
+	private function require_agent_mode(): true|WP_Error {
+		if ( ! (bool) $this->settings->get( 'agent_mode' ) ) {
+			return new WP_Error(
+				'commercepilot_agent_mode_disabled',
+				__( 'Agent Mode is off. Take over and Give back to AI are unavailable in direct messaging.', 'commercepilot' ),
+				array( 'status' => 422 )
+			);
 		}
 
 		return true;

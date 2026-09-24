@@ -219,25 +219,36 @@
 
 	function paintThread() {
 		var conversation = activeConversation();
+		var agentMode = !!cfg.agentMode;
 		threadEl.innerHTML = '';
 
 		var header = el('div', 'cp-inbox__thread-head');
 		var title = el('div');
 		title.appendChild(el('strong', '', shortId(conversation ? conversation.visitor_id : '')));
-		title.appendChild(el('span', 'cp-inbox__mode', state.mode === 'human'
-			? t('modeHuman', 'You are handling this chat. The AI is off.')
-			: t('modeAi', 'The AI is answering this chat.')));
+
+		var modeLabel;
+		if (!agentMode) {
+			modeLabel = t('modeDirect', 'Direct messaging. Reply to the visitor here.');
+		} else if (state.mode === 'human') {
+			modeLabel = t('modeHuman', 'You are handling this chat. The AI is off.');
+		} else {
+			modeLabel = t('modeAi', 'The AI is answering this chat.');
+		}
+		title.appendChild(el('span', 'cp-inbox__mode', modeLabel));
 		header.appendChild(title);
 
-		var toggle = el('button', 'button button-primary', state.mode === 'human'
-			? t('release', 'Give back to AI')
-			: t('takeOver', 'Take over'));
-		toggle.type = 'button';
-		toggle.disabled = state.busy;
-		toggle.addEventListener('click', function () {
-			setMode(state.mode === 'human' ? 'release' : 'takeover');
-		});
-		header.appendChild(toggle);
+		if (agentMode) {
+			var toggle = el('button', 'button button-primary', state.mode === 'human'
+				? t('release', 'Give back to AI')
+				: t('takeOver', 'Take over'));
+			toggle.type = 'button';
+			toggle.disabled = state.busy;
+			toggle.addEventListener('click', function () {
+				setMode(state.mode === 'human' ? 'release' : 'takeover');
+			});
+			header.appendChild(toggle);
+		}
+
 		threadEl.appendChild(header);
 
 		var body = el('div', 'cp-inbox__messages');
@@ -272,13 +283,15 @@
 	}
 
 	function renderComposer() {
+		var agentMode = !!cfg.agentMode;
+		var canReply = !agentMode || state.mode === 'human';
 		var form = el('form', 'cp-inbox__composer');
 		var input = document.createElement('textarea');
 		input.rows = 2;
-		input.placeholder = state.mode === 'human'
+		input.placeholder = canReply
 			? t('replyPlaceholder', 'Write a reply…')
 			: t('takeOverFirst', 'Take over this chat to reply manually.');
-		input.disabled = state.mode !== 'human' || state.busy;
+		input.disabled = !canReply || state.busy;
 
 		var send = el('button', 'button button-primary', t('send', 'Send'));
 		send.type = 'submit';
@@ -302,7 +315,7 @@
 	}
 
 	function setMode(action) {
-		if (!state.activeId || state.busy) {
+		if (!cfg.agentMode || !state.activeId || state.busy) {
 			return;
 		}
 		state.busy = true;
@@ -327,8 +340,10 @@
 	}
 
 	function sendReply(input) {
+		var agentMode = !!cfg.agentMode;
+		var canReply = !agentMode || state.mode === 'human';
 		var content = (input.value || '').trim();
-		if (!content || state.busy || state.mode !== 'human') {
+		if (!content || state.busy || !canReply) {
 			return;
 		}
 

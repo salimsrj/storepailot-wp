@@ -29,6 +29,8 @@ define( 'COMMERCEPILOT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'COMMERCEPILOT_URL', plugin_dir_url( __FILE__ ) );
 define( 'COMMERCEPILOT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'COMMERCEPILOT_API_URL', 'http://storepailotadmin.test' );
+define( 'COMMERCEPILOT_SIGNUP_URL', 'http://storepailot.test:8188/' );
+define( 'COMMERCEPILOT_PLANS_URL', 'http://storepailot.test:8188/dashboard/plans' );
 
 if ( version_compare( PHP_VERSION, '8.1', '<' ) ) {
 	add_action(

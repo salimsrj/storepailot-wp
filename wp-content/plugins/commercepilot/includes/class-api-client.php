@@ -129,6 +129,7 @@ final class ApiClient {
 	 * @return array<string, mixed>|\WP_Error
 	 */
 	public function update_site_settings( array $payload ): array|\WP_Error {
+		delete_transient( 'commercepilot_site' );
 		return $this->request( 'PATCH', '/api/v1/site/settings', $payload, array( 'auth' => true ) );
 	}
 
