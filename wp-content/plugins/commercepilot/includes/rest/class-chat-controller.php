@@ -144,7 +144,38 @@ final class ChatController {
 			'content'     => sanitize_textarea_field( (string) ( $message['content'] ?? '' ) ),
 			'author'      => ( $message['author'] ?? '' ) === 'human' ? 'human' : 'ai',
 			'author_name' => sanitize_text_field( (string) ( $message['author_name'] ?? '' ) ),
+			'products'    => self::sanitize_products( $message['products'] ?? array() ),
 		);
+	}
+
+	/**
+	 * @param mixed $products
+	 * @return list<array<string, mixed>>
+	 */
+	private static function sanitize_products( mixed $products ): array {
+		$clean = array();
+
+		foreach ( (array) $products as $product ) {
+			if ( ! is_array( $product ) ) {
+				continue;
+			}
+			$id = absint( $product['id'] ?? 0 );
+			if ( $id < 1 ) {
+				continue;
+			}
+			$clean[] = array(
+				'id'             => $id,
+				'name'           => sanitize_text_field( (string) ( $product['name'] ?? '' ) ),
+				'price'          => sanitize_text_field( (string) ( $product['price'] ?? '' ) ),
+				'currency'       => sanitize_text_field( (string) ( $product['currency'] ?? '' ) ),
+				'image'          => esc_url_raw( (string) ( $product['image'] ?? '' ) ),
+				'url'            => esc_url_raw( (string) ( $product['url'] ?? '' ) ),
+				'stock_status'   => sanitize_text_field( (string) ( $product['stock_status'] ?? '' ) ),
+				'has_variations' => ! empty( $product['has_variations'] ),
+			);
+		}
+
+		return $clean;
 	}
 
 	private static function mode( mixed $mode ): string {
@@ -158,22 +189,7 @@ final class ChatController {
 	private function sanitize_chat( array $data ): array {
 		$message = is_array( $data['message'] ?? null ) ? $data['message'] : array();
 		$usage   = is_array( $data['usage'] ?? null ) ? $data['usage'] : array();
-		$products = array();
-
-		foreach ( (array) ( $data['products'] ?? array() ) as $product ) {
-			if ( ! is_array( $product ) ) {
-				continue;
-			}
-			$products[] = array(
-				'id'           => absint( $product['id'] ?? 0 ),
-				'name'         => sanitize_text_field( (string) ( $product['name'] ?? '' ) ),
-				'price'        => sanitize_text_field( (string) ( $product['price'] ?? '' ) ),
-				'currency'     => sanitize_text_field( (string) ( $product['currency'] ?? '' ) ),
-				'image'        => esc_url_raw( (string) ( $product['image'] ?? '' ) ),
-				'url'          => esc_url_raw( (string) ( $product['url'] ?? '' ) ),
-				'stock_status' => sanitize_text_field( (string) ( $product['stock_status'] ?? '' ) ),
-			);
-		}
+		$products = self::sanitize_products( $data['products'] ?? array() );
 
 		// In human mode Laravel returns no assistant message: the agent replies
 		// later and the widget picks it up by polling.

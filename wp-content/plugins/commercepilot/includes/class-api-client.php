@@ -75,12 +75,16 @@ final class ApiClient {
 	}
 
 	/**
+	 * @param list<array<string, mixed>> $products
 	 * @return array<string, mixed>|\WP_Error
 	 */
-	public function send_agent_message( string $uuid, string $content, string $agent = '' ): array|\WP_Error {
+	public function send_agent_message( string $uuid, string $content, string $agent = '', array $products = array() ): array|\WP_Error {
 		$body = array( 'content' => $content );
 		if ( $agent !== '' ) {
 			$body['agent'] = $agent;
+		}
+		if ( $products !== array() ) {
+			$body['products'] = $products;
 		}
 
 		return $this->request( 'POST', '/api/v1/conversations/' . rawurlencode( $uuid ) . '/messages', $body, array( 'auth' => true, 'hmac' => true ) );
@@ -226,6 +230,13 @@ final class ApiClient {
 			Logger::warning( 'Laravel returned an error status', array( 'path' => $path, 'status' => $status ) );
 			$code    = is_array( $parsed ) ? (string) ( $parsed['error']['code'] ?? '' ) : '';
 			$message = is_array( $parsed ) ? (string) ( $parsed['error']['message'] ?? '' ) : '';
+			// Laravel validation responses use { message, errors } instead of { error: {...} }.
+			if ( $message === '' && is_array( $parsed ) ) {
+				$message = sanitize_text_field( (string) ( $parsed['message'] ?? '' ) );
+			}
+			if ( $code === '' && $status === 422 ) {
+				$code = 'commercepilot_validation_failed';
+			}
 			if ( $code === 'invalid_site_token' || $code === 'missing_site_token' ) {
 				return new \WP_Error( 'commercepilot_expired', __( 'Connection expired. Please reconnect CommercePilot.', 'commercepilot' ), array( 'status' => 401 ) );
 			}
@@ -243,15 +254,18 @@ final class ApiClient {
 					array( 'status' => 429 )
 				);
 			}
+			// Prefer Laravel's error body (e.g. conversation_not_found) over a
+			// generic "API URL not reachable" — a 404 often means a missing
+			// resource for this site, not that the host is down.
+			if ( $message !== '' ) {
+				return new \WP_Error( $code !== '' ? $code : 'commercepilot_api_error', $message, array( 'status' => $status ?: 502 ) );
+			}
 			if ( $status === 404 ) {
 				return new \WP_Error(
 					'commercepilot_unavailable',
 					__( 'CommercePilot API URL is not reachable. Check Connection settings.', 'commercepilot' ),
 					array( 'status' => 404 )
 				);
-			}
-			if ( $code !== '' && $message !== '' ) {
-				return new \WP_Error( $code, $message, array( 'status' => $status ?: 502 ) );
 			}
 			return new \WP_Error( 'commercepilot_unavailable', __( 'Sorry, the assistant is temporarily unavailable. Please try again.', 'commercepilot' ), array( 'status' => $status ?: 502 ) );
 		}

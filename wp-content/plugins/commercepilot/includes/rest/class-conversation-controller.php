@@ -12,6 +12,7 @@ namespace CommercePilot\REST;
 use CommercePilot\ApiClient;
 use CommercePilot\Security;
 use CommercePilot\Settings;
+use CommercePilot\WooCommerce\ProductService;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -22,9 +23,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class ConversationController {
 
+	private const MAX_SHARED_PRODUCTS = 5;
+
 	public function __construct(
 		private Settings $settings,
-		private ApiClient $api
+		private ApiClient $api,
+		private ProductService $products
 	) {}
 
 	public function index( WP_REST_Request $request ): WP_REST_Response|WP_Error {
@@ -198,17 +202,42 @@ final class ConversationController {
 			return $uuid;
 		}
 
-		$content = sanitize_textarea_field( (string) ( $request->get_param( 'content' ) ?? '' ) );
-		if ( $content === '' || strlen( $content ) > 4000 ) {
+		$content  = sanitize_textarea_field( (string) ( $request->get_param( 'content' ) ?? '' ) );
+		$products = $this->resolve_shared_products( $request->get_param( 'product_ids' ) );
+
+		if ( strlen( $content ) > 4000 ) {
 			return new WP_Error( 'commercepilot_invalid_message', __( 'Please enter a valid reply.', 'commercepilot' ), array( 'status' => 400 ) );
 		}
 
-		$result = $this->api->send_agent_message( $uuid, $content, $this->agent_name() );
+		if ( $content === '' && $products === array() ) {
+			return new WP_Error( 'commercepilot_invalid_message', __( 'Please enter a reply or share a product.', 'commercepilot' ), array( 'status' => 400 ) );
+		}
+
+		// Laravel still requires a non-empty content field on agent messages.
+		if ( $content === '' && $products !== array() ) {
+			$names = array();
+			foreach ( $products as $product ) {
+				$name = sanitize_text_field( (string) ( $product['name'] ?? '' ) );
+				if ( $name !== '' ) {
+					$names[] = $name;
+				}
+			}
+			$content = $names !== array()
+				? implode( ', ', $names )
+				: __( 'Shared products', 'commercepilot' );
+		}
+
+		$result = $this->api->send_agent_message( $uuid, $content, $this->agent_name(), $products );
 		if ( is_wp_error( $result ) ) {
 			return $this->error_response( $result );
 		}
 
 		$data = is_array( $result['data'] ?? null ) ? $result['data'] : $result;
+		// Prefer the freshly resolved products if Laravel echoes none yet.
+		if ( $products !== array() && empty( $data['products'] ) ) {
+			$data['products'] = $products;
+		}
+
 		return new WP_REST_Response( $this->sanitize_message( $data ), 201 );
 	}
 
@@ -250,6 +279,33 @@ final class ConversationController {
 		$name = $user instanceof \WP_User ? (string) $user->display_name : '';
 
 		return sanitize_text_field( $name );
+	}
+
+	/**
+	 * @param mixed $raw_ids
+	 * @return list<array<string, mixed>>
+	 */
+	private function resolve_shared_products( mixed $raw_ids ): array {
+		$ids = array();
+		foreach ( (array) $raw_ids as $id ) {
+			$id = absint( $id );
+			if ( $id > 0 && ! in_array( $id, $ids, true ) ) {
+				$ids[] = $id;
+			}
+			if ( count( $ids ) >= self::MAX_SHARED_PRODUCTS ) {
+				break;
+			}
+		}
+
+		$products = array();
+		foreach ( $ids as $id ) {
+			$result = $this->products->get_product( $id );
+			if ( ! is_wp_error( $result ) && is_array( $result ) ) {
+				$products[] = $result;
+			}
+		}
+
+		return $products;
 	}
 
 	/**
@@ -313,7 +369,38 @@ final class ConversationController {
 			'author'      => ( $message['author'] ?? '' ) === 'human' ? 'human' : 'ai',
 			'author_name' => sanitize_text_field( (string) ( $message['author_name'] ?? '' ) ),
 			'created_at'  => sanitize_text_field( (string) ( $message['created_at'] ?? '' ) ),
+			'products'    => $this->sanitize_products( $message['products'] ?? array() ),
 		);
+	}
+
+	/**
+	 * @param mixed $products
+	 * @return list<array<string, mixed>>
+	 */
+	private function sanitize_products( mixed $products ): array {
+		$clean = array();
+
+		foreach ( (array) $products as $product ) {
+			if ( ! is_array( $product ) ) {
+				continue;
+			}
+			$id = absint( $product['id'] ?? 0 );
+			if ( $id < 1 ) {
+				continue;
+			}
+			$clean[] = array(
+				'id'             => $id,
+				'name'           => sanitize_text_field( (string) ( $product['name'] ?? '' ) ),
+				'price'          => sanitize_text_field( (string) ( $product['price'] ?? '' ) ),
+				'currency'       => sanitize_text_field( (string) ( $product['currency'] ?? '' ) ),
+				'image'          => esc_url_raw( (string) ( $product['image'] ?? '' ) ),
+				'url'            => esc_url_raw( (string) ( $product['url'] ?? '' ) ),
+				'stock_status'   => sanitize_text_field( (string) ( $product['stock_status'] ?? '' ) ),
+				'has_variations' => ! empty( $product['has_variations'] ),
+			);
+		}
+
+		return $clean;
 	}
 
 	private function mode( mixed $mode ): string {

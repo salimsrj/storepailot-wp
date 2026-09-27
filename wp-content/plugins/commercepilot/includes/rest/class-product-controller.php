@@ -40,6 +40,20 @@ final class ProductController {
 		return new WP_REST_Response( array( 'products' => $products ), 200 );
 	}
 
+	/**
+	 * Admin inbox product picker: same normalized shape as the HMAC search tool.
+	 */
+	public function admin_search( WP_REST_Request $request ): WP_REST_Response {
+		$products = $this->products->search(
+			array(
+				'query' => $request->get_param( 'query' ),
+				'limit' => $request->get_param( 'limit' ) ?? 8,
+			)
+		);
+
+		return new WP_REST_Response( array( 'products' => $products ), 200 );
+	}
+
 	public function get_product( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$result = $this->products->get_product( absint( $request->get_param( 'id' ) ) );
 		return is_wp_error( $result ) ? $result : new WP_REST_Response( $result, 200 );

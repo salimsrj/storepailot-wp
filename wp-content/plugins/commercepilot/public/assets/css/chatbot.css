@@ -356,7 +356,8 @@
 .cp-chatbot-card a,
 .cp-chatbot-card button,
 .cp-chatbot-upgrade a,
-.cp-chatbot-error button {
+.cp-chatbot-error button,
+.cp-chatbot-variation button {
 	border: 0;
 	border-radius: 8px;
 	padding: 6px 10px;
@@ -365,6 +366,40 @@
 	cursor: pointer;
 	background: var(--cp-primary, #2563eb);
 	color: #fff;
+}
+
+.cp-chatbot-variation {
+	border: 1px solid var(--cp-border);
+	border-radius: 12px;
+	padding: 10px;
+	background: var(--cp-bg);
+	display: grid;
+	gap: 8px;
+}
+
+.cp-chatbot-variation-title {
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.cp-chatbot-variation-hint {
+	margin: 0;
+	font-size: 12px;
+	color: var(--cp-muted);
+}
+
+.cp-chatbot-variation-select {
+	width: 100%;
+	border: 1px solid var(--cp-border);
+	border-radius: 8px;
+	padding: 8px;
+	font-size: 13px;
+	background: #fff;
+}
+
+.cp-chatbot-variation button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 
 .cp-chatbot-composer {

@@ -48,7 +48,7 @@ final class Rest {
 		$product  = new ProductController( $products, $vars );
 		$site     = new SiteController( $this->settings, new Connection( $this->settings, $this->api ), $this->api );
 		$health   = new HealthController( $this->settings, $this->api );
-		$conversations = new ConversationController( $this->settings, $this->api );
+		$conversations = new ConversationController( $this->settings, $this->api, $products );
 
 		$public = array( $auth, 'public_rest' );
 		$poll   = array( $auth, 'public_poll' );
@@ -180,7 +180,7 @@ final class Rest {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $product, 'variations' ),
-				'permission_callback' => $hmac,
+				'permission_callback' => $this->public_or_hmac( $auth ),
 			)
 		);
 		register_rest_route(
@@ -329,6 +329,27 @@ final class Rest {
 				'methods'             => 'POST',
 				'callback'            => array( $conversations, 'reply' ),
 				'permission_callback' => $admin,
+			)
+		);
+		register_rest_route(
+			self::NAMESPACE,
+			'/admin/products/search',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $product, 'admin_search' ),
+				'permission_callback' => $admin,
+				'args'                => array(
+					'query' => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+						'default'           => '',
+					),
+					'limit' => array(
+						'type'              => 'integer',
+						'sanitize_callback' => 'absint',
+						'default'           => 8,
+					),
+				),
 			)
 		);
 	}

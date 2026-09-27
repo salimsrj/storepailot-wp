@@ -297,14 +297,132 @@
 
 .cp-inbox__composer {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 8px;
 	padding: 10px;
 	border-top: 1px solid #dcdcde;
+	align-items: flex-end;
 }
 
 .cp-inbox__composer textarea {
-	flex: 1;
+	flex: 1 1 100%;
 	resize: none;
+}
+
+.cp-inbox__composer-actions {
+	display: flex;
+	gap: 8px;
+	margin-left: auto;
+}
+
+.cp-inbox__picker {
+	flex: 1 1 100%;
+	border: 1px solid #dcdcde;
+	background: #fff;
+	padding: 10px;
+	border-radius: 4px;
+}
+
+.cp-inbox__picker-search {
+	width: 100%;
+	margin-bottom: 8px;
+}
+
+.cp-inbox__picker-results {
+	max-height: 200px;
+	overflow: auto;
+	margin: 0 0 8px;
+	padding: 0;
+	list-style: none;
+}
+
+.cp-inbox__picker-item {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	padding: 6px 4px;
+	border-bottom: 1px solid #f0f0f1;
+	cursor: pointer;
+}
+
+.cp-inbox__picker-item:last-child {
+	border-bottom: 0;
+}
+
+.cp-inbox__picker-item.is-selected {
+	background: #f0f6fc;
+}
+
+.cp-inbox__picker-item img {
+	width: 36px;
+	height: 36px;
+	object-fit: cover;
+	border-radius: 3px;
+	background: #f0f0f1;
+	flex-shrink: 0;
+}
+
+.cp-inbox__picker-meta {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.cp-inbox__picker-name {
+	font-weight: 600;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cp-inbox__picker-price {
+	font-size: 12px;
+	color: #646970;
+}
+
+.cp-inbox__picker-actions {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+}
+
+.cp-msg__products {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.cp-msg__product {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	padding: 6px;
+	background: rgba(255, 255, 255, 0.55);
+	border-radius: 4px;
+}
+
+.cp-msg--user .cp-msg__product {
+	background: rgba(255, 255, 255, 0.15);
+}
+
+.cp-msg__product img {
+	width: 40px;
+	height: 40px;
+	object-fit: cover;
+	border-radius: 3px;
+	background: #f0f0f1;
+	flex-shrink: 0;
+}
+
+.cp-msg__product-name {
+	font-weight: 600;
+	font-size: 13px;
+}
+
+.cp-msg__product-price {
+	font-size: 12px;
+	opacity: 0.8;
 }
 
 @media (max-width: 782px) {

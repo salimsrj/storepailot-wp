@@ -108,6 +108,38 @@ widget every 5s while handed over, the inbox every 5s per thread and 15s per
 list, both paused when the tab is hidden. There is no websocket layer in the
 backend.
 
+### Sharing product cards from wp-admin
+
+While handling a chat, the inbox **Share product** button (separate from **Send**)
+searches WooCommerce via `GET /commercepilot/v1/admin/products/search` and posts
+selected ids on the reply endpoint:
+
+```
+Admin → WP /admin/conversations/{uuid}/reply
+        { content?, product_ids: [1, 2] }
+     → WP resolves published products via ProductService
+     → Laravel POST /api/v1/conversations/{uuid}/messages
+        { content, agent, products: [ { id, name, price, currency, image, url, stock_status, … } ] }
+```
+
+Laravel must accept the optional `products` array, persist it on the assistant
+message (for example `metadata.products`), and return that array on:
+
+- the message create response
+- conversation / message list payloads
+- visitor `GET` message polls
+
+Until that lands, WordPress still sends `products` and, when the admin shares
+cards without typing text, fills `content` with the product name(s) so Laravel's
+current `content` validation passes. The admin inbox can show cards from the
+local resolve step; shoppers only see cards after Laravel stores and returns
+`products`.
+
+WordPress sanitizes `products` on both the admin inbox and the storefront poll
+paths so the widget can render the same cards as AI recommendations. Without
+Laravel persistence, shared cards appear only in the admin reply echo, not for
+the shopper.
+
 ## Options
 
 Option key: `commercepilot_settings`

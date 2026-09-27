@@ -131,12 +131,19 @@
 				message: message
 			});
 		},
-		addToCart: function (productId) {
-			return this.request('POST', 'cart/add', {
+		addToCart: function (productId, variationId) {
+			var body = {
 				visitor_id: state.visitorId,
 				product_id: productId,
 				quantity: 1
-			});
+			};
+			if (variationId) {
+				body.variation_id = variationId;
+			}
+			return this.request('POST', 'cart/add', body);
+		},
+		variations: function (productId) {
+			return this.request('GET', 'products/' + encodeURIComponent(productId) + '/variations');
 		},
 		checkout: function () {
 			return this.request('GET', 'checkout', null, { visitor_id: state.visitorId });
@@ -560,6 +567,10 @@
 				box.appendChild(renderProducts(item.products));
 				return;
 			}
+			if (item.type === 'variation_picker') {
+				box.appendChild(renderVariationPicker(item));
+				return;
+			}
 			if (item.type === 'upgrade') {
 				box.appendChild(renderUpgrade(item));
 				return;
@@ -632,7 +643,7 @@
 				var add = el('button', '', (cfg.i18n && cfg.i18n.addToCart) || 'Add to cart');
 				add.type = 'button';
 				add.addEventListener('click', function () {
-					addProduct(product.id);
+					requestAddProduct(product);
 				});
 				actions.appendChild(add);
 			}
@@ -640,6 +651,72 @@
 			card.appendChild(body);
 			wrap.appendChild(card);
 		});
+		return wrap;
+	}
+
+	function variationLabel(variation) {
+		var attrs = variation && variation.attributes ? variation.attributes : null;
+		if (attrs && typeof attrs === 'object') {
+			var parts = Object.keys(attrs).map(function (key) {
+				return String(attrs[key] || '').replace(/-/g, ' ');
+			}).filter(Boolean);
+			if (parts.length) {
+				return parts.join(' / ');
+			}
+		}
+		return (variation && variation.name) || ('#' + (variation && variation.id));
+	}
+
+	function renderVariationPicker(item) {
+		var product = item.product || {};
+		var wrap = el('div', 'cp-chatbot-variation');
+		wrap.appendChild(el('div', 'cp-chatbot-variation-title', product.name || ((cfg.i18n && cfg.i18n.selectVariation) || 'Select a variation')));
+		wrap.appendChild(el('p', 'cp-chatbot-variation-hint', (cfg.i18n && cfg.i18n.chooseOption) || 'Choose an option'));
+
+		var select = document.createElement('select');
+		select.className = 'cp-chatbot-variation-select';
+		var placeholder = document.createElement('option');
+		placeholder.value = '';
+		placeholder.textContent = (cfg.i18n && cfg.i18n.selectVariation) || 'Select a variation';
+		select.appendChild(placeholder);
+
+		(item.variations || []).forEach(function (variation) {
+			if (variation.stock_status === 'outofstock') {
+				return;
+			}
+			var option = document.createElement('option');
+			option.value = String(variation.id);
+			var label = variationLabel(variation);
+			if (variation.price) {
+				label += ' — ' + (product.currency ? product.currency + ' ' : '') + variation.price;
+			}
+			option.textContent = label;
+			select.appendChild(option);
+		});
+
+		var actions = el('div', 'cp-chatbot-card-actions');
+		var confirm = el('button', '', (cfg.i18n && cfg.i18n.addToCart) || 'Add to cart');
+		confirm.type = 'button';
+		confirm.disabled = true;
+		select.addEventListener('change', function () {
+			confirm.disabled = !select.value;
+		});
+		confirm.addEventListener('click', function () {
+			var variationId = parseInt(select.value, 10);
+			if (!variationId) {
+				return;
+			}
+			// Drop the picker once a choice is made.
+			var idx = state.messages.indexOf(item);
+			if (idx !== -1) {
+				state.messages.splice(idx, 1);
+			}
+			addProduct(product.id, variationId);
+		});
+
+		wrap.appendChild(select);
+		actions.appendChild(confirm);
+		wrap.appendChild(actions);
 		return wrap;
 	}
 
@@ -676,7 +753,7 @@
 		sendChat(text);
 	}
 
-	function sendChat(text) {
+	function sendChat(text, isRetry) {
 		setLoading(true);
 		API.chat(text)
 			.then(function (result) {
@@ -691,12 +768,22 @@
 					paintMessages();
 					return;
 				}
+				var errorCode = json.error && json.error.code;
+				// Stale conversation after reconnect: drop it and retry once.
+				if (!result.ok && !isRetry && (errorCode === 'conversation_not_found' || errorCode === 'conversation_forbidden')) {
+					resetConversation();
+					sendChat(text, true);
+					return;
+				}
 				if (!result.ok) {
 					state.messages.push({
 						type: 'error',
 						content: (json.error && json.error.message) || ((cfg.i18n && cfg.i18n.unavailable) || 'Sorry, the assistant is temporarily unavailable. Please try again.'),
 						retry: function () {
 							state.messages.pop();
+							if (errorCode === 'conversation_not_found' || errorCode === 'conversation_forbidden') {
+								resetConversation();
+							}
 							sendChat(text);
 						}
 					});
@@ -737,10 +824,73 @@
 			});
 	}
 
-	function addProduct(productId) {
-		API.addToCart(productId).then(function (result) {
+	function resetConversation() {
+		state.conversationId = '';
+		state.lastMessageId = 0;
+		state.historyLoaded = false;
+		state.mode = 'ai';
+		Storage.clearConversation();
+		stopPolling();
+	}
+
+	function requestAddProduct(product) {
+		if (!product || !product.id) {
+			return;
+		}
+		if (product.has_variations) {
+			openVariationPicker(product);
+			return;
+		}
+		addProduct(product.id);
+	}
+
+	function openVariationPicker(product) {
+		API.variations(product.id).then(function (result) {
 			if (!result.ok) {
-				state.messages.push({ type: 'error', content: (result.json && result.json.message) || ((cfg.i18n && cfg.i18n.unavailable) || '') });
+				state.messages.push({
+					type: 'error',
+					content: (result.json && (result.json.message || (result.json.error && result.json.error.message))) || ((cfg.i18n && cfg.i18n.unavailable) || '')
+				});
+				paintMessages();
+				return;
+			}
+			var variations = (result.json && result.json.variations) || [];
+			var available = variations.filter(function (variation) {
+				return variation && variation.id && variation.stock_status !== 'outofstock';
+			});
+			if (!available.length) {
+				state.messages.push({
+					type: 'error',
+					content: (cfg.i18n && cfg.i18n.noVariations) || 'No purchasable variations are available.'
+				});
+				paintMessages();
+				return;
+			}
+			state.messages.push({
+				type: 'variation_picker',
+				product: product,
+				variations: available
+			});
+			paintMessages();
+		}).catch(function () {
+			state.messages.push({
+				type: 'error',
+				content: (cfg.i18n && cfg.i18n.unavailable) || ''
+			});
+			paintMessages();
+		});
+	}
+
+	function addProduct(productId, variationId) {
+		API.addToCart(productId, variationId).then(function (result) {
+			if (!result.ok) {
+				var code = (result.json && result.json.code) || '';
+				var message = (result.json && result.json.message) || ((cfg.i18n && cfg.i18n.unavailable) || '');
+				if (code === 'commercepilot_variation_required') {
+					openVariationPicker({ id: productId, has_variations: true });
+					return;
+				}
+				state.messages.push({ type: 'error', content: message });
 				paintMessages();
 				return;
 			}
@@ -757,7 +907,10 @@
 					}
 				});
 			}
-			state.messages.push({ role: 'assistant', content: 'Added to cart.' });
+			state.messages.push({
+				role: 'assistant',
+				content: (cfg.i18n && cfg.i18n.addedToCart) || 'Added to cart.'
+			});
 			paintMessages();
 		});
 	}
@@ -824,6 +977,10 @@
 		API.messages()
 			.then(function (result) {
 				if (!result.ok) {
+					var code = result.json && result.json.error && result.json.error.code;
+					if (code === 'conversation_not_found' || code === 'conversation_forbidden') {
+						resetConversation();
+					}
 					return;
 				}
 				var json = result.json || {};
@@ -833,7 +990,9 @@
 
 				incoming.forEach(function (message) {
 					trackMessageId(message.id);
-					if (!message.content) {
+					var hasContent = !!(message.content && String(message.content).trim());
+					var hasProducts = !!(message.products && message.products.length);
+					if (!hasContent && !hasProducts) {
 						return;
 					}
 					if (hasMessage(message.id)) {
@@ -842,7 +1001,12 @@
 					// Outside the initial restore the visitor's own turns are
 					// already on screen, so only agent replies are rendered.
 					if (message.role === 'assistant' || includeUser) {
-						rendered.push({ role: message.role, content: message.content, id: message.id });
+						if (hasContent) {
+							rendered.push({ role: message.role, content: message.content, id: message.id });
+						}
+						if (hasProducts && message.role === 'assistant') {
+							rendered.push({ type: 'products', products: message.products, id: message.id });
+						}
 						if (!state.isOpen && message.role === 'assistant') {
 							unreadDelta += 1;
 						}

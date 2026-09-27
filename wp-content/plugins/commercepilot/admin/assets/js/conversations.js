@@ -23,10 +23,16 @@
 		messages: [],
 		lastMessageId: 0,
 		busy: false,
-		filter: ''
+		filter: '',
+		pickerOpen: false,
+		pickerQuery: '',
+		pickerResults: [],
+		pickerSelected: {},
+		pickerSearching: false
 	};
 
-	var timers = { list: null, thread: null };
+	var timers = { list: null, thread: null, search: null };
+	var MAX_SHARED_PRODUCTS = 5;
 
 	function t(key, fallback) {
 		return i18n[key] || fallback;
@@ -188,6 +194,7 @@
 		state.activeId = id;
 		state.messages = [];
 		state.lastMessageId = 0;
+		closePicker(true);
 		paintList();
 		threadEl.innerHTML = '';
 		threadEl.appendChild(el('div', 'cp-inbox__placeholder', t('loading', 'Loading…')));
@@ -275,11 +282,41 @@
 			: (message.author === 'human' ? (message.author_name || t('human', 'You')) : t('assistant', 'AI assistant'));
 
 		wrap.appendChild(el('div', 'cp-msg__label', label));
-		wrap.appendChild(el('div', 'cp-msg__body', message.content));
+		if (message.content) {
+			wrap.appendChild(el('div', 'cp-msg__body', message.content));
+		}
+		if (message.products && message.products.length) {
+			wrap.appendChild(renderMessageProducts(message.products));
+		}
 		if (message.created_at) {
 			wrap.appendChild(el('div', 'cp-msg__time', formatTime(message.created_at)));
 		}
 		return wrap;
+	}
+
+	function renderMessageProducts(products) {
+		var list = el('div', 'cp-msg__products');
+		products.forEach(function (product) {
+			var card = el('div', 'cp-msg__product');
+			if (product.image) {
+				var img = document.createElement('img');
+				img.src = product.image;
+				img.alt = '';
+				card.appendChild(img);
+			}
+			var meta = el('div', 'cp-msg__product-meta');
+			meta.appendChild(el('div', 'cp-msg__product-name', product.name || ''));
+			var price = product.price || '';
+			if (price && product.currency) {
+				price = product.currency + ' ' + price;
+			}
+			if (price) {
+				meta.appendChild(el('div', 'cp-msg__product-price', price));
+			}
+			card.appendChild(meta);
+			list.appendChild(card);
+		});
+		return list;
 	}
 
 	function renderComposer() {
@@ -293,12 +330,40 @@
 			: t('takeOverFirst', 'Take over this chat to reply manually.');
 		input.disabled = !canReply || state.busy;
 
+		var actions = el('div', 'cp-inbox__composer-actions');
+
+		var share = el('button', 'button', t('shareProduct', 'Share product'));
+		share.type = 'button';
+		share.disabled = !canReply || state.busy;
+		share.addEventListener('click', function () {
+			if (!canReply || state.busy) {
+				return;
+			}
+			if (state.pickerOpen) {
+				closePicker(true);
+				paintThread();
+				return;
+			}
+			state.pickerOpen = true;
+			state.pickerQuery = '';
+			state.pickerResults = [];
+			state.pickerSelected = {};
+			paintThread();
+			searchProducts('');
+		});
+
 		var send = el('button', 'button button-primary', t('send', 'Send'));
 		send.type = 'submit';
 		send.disabled = input.disabled;
 
+		actions.appendChild(share);
+		actions.appendChild(send);
+
 		form.appendChild(input);
-		form.appendChild(send);
+		if (state.pickerOpen && canReply) {
+			form.appendChild(renderProductPicker(input));
+		}
+		form.appendChild(actions);
 
 		form.addEventListener('submit', function (event) {
 			event.preventDefault();
@@ -314,11 +379,202 @@
 		return form;
 	}
 
+	function renderProductPicker(input) {
+		var picker = el('div', 'cp-inbox__picker');
+
+		var search = document.createElement('input');
+		search.type = 'search';
+		search.className = 'cp-inbox__picker-search';
+		search.placeholder = t('searchProducts', 'Search products…');
+		search.value = state.pickerQuery;
+		search.addEventListener('input', function () {
+			state.pickerQuery = search.value;
+			scheduleProductSearch(search.value);
+		});
+
+		var results = el('ul', 'cp-inbox__picker-results');
+		if (state.pickerSearching && !state.pickerResults.length) {
+			results.appendChild(el('li', 'cp-inbox__placeholder', t('loading', 'Loading…')));
+		} else if (!state.pickerResults.length) {
+			results.appendChild(el('li', 'cp-inbox__placeholder', t('noProducts', 'No products found.')));
+		} else {
+			state.pickerResults.forEach(function (product) {
+				var item = el('li', 'cp-inbox__picker-item');
+				if (state.pickerSelected[product.id]) {
+					item.className += ' is-selected';
+				}
+				if (product.image) {
+					var img = document.createElement('img');
+					img.src = product.image;
+					img.alt = '';
+					item.appendChild(img);
+				}
+				var meta = el('div', 'cp-inbox__picker-meta');
+				meta.appendChild(el('span', 'cp-inbox__picker-name', product.name || ''));
+				var price = product.price || '';
+				if (price && product.currency) {
+					price = product.currency + ' ' + price;
+				}
+				if (price) {
+					meta.appendChild(el('span', 'cp-inbox__picker-price', price));
+				}
+				item.appendChild(meta);
+				item.addEventListener('click', function () {
+					toggleProductSelection(product);
+					paintThread();
+					var field = threadEl.querySelector('.cp-inbox__picker-search');
+					if (field) {
+						field.focus();
+						field.value = state.pickerQuery;
+					}
+				});
+				results.appendChild(item);
+			});
+		}
+
+		var actions = el('div', 'cp-inbox__picker-actions');
+		var cancel = el('button', 'button', t('cancel', 'Cancel'));
+		cancel.type = 'button';
+		cancel.addEventListener('click', function () {
+			closePicker(true);
+			paintThread();
+			focusComposer();
+		});
+
+		var confirm = el('button', 'button button-primary', t('shareSelected', 'Share selected'));
+		confirm.type = 'button';
+		confirm.disabled = state.busy || selectedProductIds().length === 0;
+		confirm.addEventListener('click', function () {
+			shareProducts(input);
+		});
+
+		actions.appendChild(cancel);
+		actions.appendChild(confirm);
+
+		picker.appendChild(search);
+		picker.appendChild(results);
+		picker.appendChild(actions);
+
+		window.setTimeout(function () {
+			var field = threadEl.querySelector('.cp-inbox__picker-search');
+			if (field) {
+				field.focus();
+			}
+		}, 0);
+
+		return picker;
+	}
+
+	function closePicker(reset) {
+		state.pickerOpen = false;
+		if (reset) {
+			state.pickerQuery = '';
+			state.pickerResults = [];
+			state.pickerSelected = {};
+			state.pickerSearching = false;
+		}
+		if (timers.search) {
+			window.clearTimeout(timers.search);
+			timers.search = null;
+		}
+	}
+
+	function selectedProductIds() {
+		return Object.keys(state.pickerSelected).map(function (id) {
+			return parseInt(id, 10);
+		}).filter(function (id) {
+			return !isNaN(id) && id > 0;
+		});
+	}
+
+	function toggleProductSelection(product) {
+		var id = parseInt(product.id, 10);
+		if (isNaN(id) || id < 1) {
+			return;
+		}
+		if (state.pickerSelected[id]) {
+			delete state.pickerSelected[id];
+			return;
+		}
+		if (selectedProductIds().length >= MAX_SHARED_PRODUCTS) {
+			window.alert(t('maxProducts', 'You can share up to 5 products at once.'));
+			return;
+		}
+		state.pickerSelected[id] = true;
+	}
+
+	function scheduleProductSearch(query) {
+		if (timers.search) {
+			window.clearTimeout(timers.search);
+		}
+		timers.search = window.setTimeout(function () {
+			searchProducts(query);
+		}, 250);
+	}
+
+	function searchProducts(query) {
+		state.pickerSearching = true;
+		api('GET', 'admin/products/search', null, { query: query || '', limit: 8 })
+			.then(function (json) {
+				if (!state.pickerOpen) {
+					return;
+				}
+				state.pickerResults = json.products || [];
+				state.pickerSearching = false;
+				paintThread();
+			})
+			.catch(function (error) {
+				if (!state.pickerOpen) {
+					return;
+				}
+				state.pickerResults = [];
+				state.pickerSearching = false;
+				paintThread();
+				window.alert(error.message);
+			});
+	}
+
+	function shareProducts(input) {
+		var agentMode = !!cfg.agentMode;
+		var canReply = !agentMode || state.mode === 'human';
+		var ids = selectedProductIds();
+		if (!ids.length) {
+			window.alert(t('selectProduct', 'Select at least one product.'));
+			return;
+		}
+		if (state.busy || !canReply) {
+			return;
+		}
+
+		var content = (input.value || '').trim();
+		state.busy = true;
+		input.value = '';
+		closePicker(true);
+		paintThread();
+
+		api('POST', 'admin/conversations/' + encodeURIComponent(state.activeId) + '/reply', {
+			content: content,
+			product_ids: ids
+		})
+			.then(function (message) {
+				appendMessage(message);
+			})
+			.catch(function (error) {
+				window.alert(error.message);
+			})
+			.then(function () {
+				state.busy = false;
+				paintThread();
+				focusComposer();
+			});
+	}
+
 	function setMode(action) {
 		if (!cfg.agentMode || !state.activeId || state.busy) {
 			return;
 		}
 		state.busy = true;
+		closePicker(true);
 		paintThread();
 
 		api('POST', 'admin/conversations/' + encodeURIComponent(state.activeId) + '/' + action)
@@ -349,6 +605,7 @@
 
 		state.busy = true;
 		input.value = '';
+		closePicker(true);
 		paintThread();
 
 		api('POST', 'admin/conversations/' + encodeURIComponent(state.activeId) + '/reply', { content: content })
