@@ -12,6 +12,7 @@
 		conversationKey: 'commercepilot_conversation_id',
 		welcomeKey: 'commercepilot_welcome_delivered',
 		unreadKey: 'commercepilot_unread_count',
+		muteKey: 'commercepilot_sound_muted',
 		getVisitor: function () {
 			var id = localStorage.getItem(this.visitorKey);
 			if (!id) {
@@ -50,6 +51,17 @@
 			}
 			return value;
 		},
+		isSoundMuted: function () {
+			return localStorage.getItem(this.muteKey) === '1';
+		},
+		setSoundMuted: function (muted) {
+			if (muted) {
+				localStorage.setItem(this.muteKey, '1');
+			} else {
+				localStorage.removeItem(this.muteKey);
+			}
+			return !!muted;
+		},
 		uuid: function () {
 			if (window.crypto && typeof window.crypto.randomUUID === 'function') {
 				return window.crypto.randomUUID();
@@ -76,6 +88,7 @@
 		pollTimer: null,
 		historyLoaded: false,
 		unread: Storage.getUnread(),
+		soundMuted: Storage.isSoundMuted(),
 		notifyAudio: null,
 		pendingNotifySound: false,
 		notifyUnlockArmed: false
@@ -227,12 +240,21 @@
 		}
 		title.appendChild(meta);
 
+		var actions = el('div', 'cp-chatbot-header-actions');
+
+		var mute = el('button', 'cp-chatbot-icon cp-chatbot-mute');
+		mute.type = 'button';
+		mute.addEventListener('click', toggleSoundMute);
+		actions.appendChild(mute);
+
 		var close = el('button', 'cp-chatbot-icon', '×');
 		close.type = 'button';
 		close.setAttribute('aria-label', (cfg.i18n && cfg.i18n.close) || 'Close chat');
 		close.addEventListener('click', closeChat);
+		actions.appendChild(close);
+
 		header.appendChild(title);
-		header.appendChild(close);
+		header.appendChild(actions);
 
 		var messages = el('div', 'cp-chatbot-messages');
 		messages.setAttribute('aria-live', 'polite');
@@ -284,9 +306,11 @@
 		root._send = send;
 		root._toggle = toggle;
 		root._badge = badge;
+		root._mute = mute;
 
 		deliverWelcome();
 		paintBadge();
+		paintMuteButton();
 		paintMessages();
 	}
 
@@ -354,6 +378,34 @@
 		paintBadge();
 	}
 
+	function toggleSoundMute() {
+		state.soundMuted = Storage.setSoundMuted(!state.soundMuted);
+		if (state.soundMuted) {
+			state.pendingNotifySound = false;
+			disarmNotifyUnlock();
+		}
+		paintMuteButton();
+		paintBadge();
+	}
+
+	function paintMuteButton() {
+		var mute = root._mute;
+		if (!mute) {
+			return;
+		}
+		mute.classList.toggle('is-muted', state.soundMuted);
+		mute.setAttribute(
+			'aria-label',
+			state.soundMuted
+				? ((cfg.i18n && cfg.i18n.unmuteSound) || 'Unmute message sounds')
+				: ((cfg.i18n && cfg.i18n.muteSound) || 'Mute message sounds')
+		);
+		mute.setAttribute('title', mute.getAttribute('aria-label'));
+		mute.innerHTML = state.soundMuted
+			? '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16.5 12a4.5 4.5 0 0 0-2.25-3.9l1.13-1.13A6 6 0 0 1 18 12c0 1.2-.35 2.31-.95 3.25l-1.16-1.16c.38-.63.61-1.34.61-2.09Zm3.45-6.66 1.06 1.06-2.12 2.12A8.94 8.94 0 0 1 21 12a9 9 0 0 1-2.64 6.36l1.42 1.42L18.72 21l-1.76-1.76A8.96 8.96 0 0 1 12 19.5v2.25A11.2 11.2 0 0 0 18.9 18.9L20.4 20.4 19.34 21.46 4.54 6.66 5.6 5.6l2.9 2.9V4.5L12 8.25l1.76-1.76 1.06 1.06L12 10.37 8.5 6.87v.05L5.6 5.6 4.54 6.66l14.8 14.8 1.06-1.06-4.45-4.45Zm-9.2 9.2 1.75 1.75L7.5 19.5v-4.96Z"/></svg>'
+			: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 10v4h3.5L12 19.5V4.5L6.5 10H3Zm10.5 2a2.5 2.5 0 0 0-1.25-2.17v4.34A2.5 2.5 0 0 0 13.5 12Zm0-7.5v1.7a6 6 0 0 1 0 11.6v1.7a7.5 7.5 0 0 0 0-15Z"/></svg>';
+	}
+
 	function paintBadge() {
 		var badge = root._badge;
 		if (!badge) {
@@ -363,7 +415,7 @@
 			badge.hidden = false;
 			badge.textContent = state.unread > 99 ? '99+' : String(state.unread);
 			badge.setAttribute('aria-label', state.unread + ' unread messages');
-			badge.classList.toggle('is-pending-sound', state.pendingNotifySound);
+			badge.classList.toggle('is-pending-sound', state.pendingNotifySound && !state.soundMuted);
 		} else {
 			badge.hidden = true;
 			badge.textContent = '';
@@ -373,11 +425,11 @@
 	}
 
 	/**
-	 * Soft chime. Tries immediately (page load). If the browser blocks autoplay
-	 * (common in Incognito), queues the sound for the next real user gesture.
+	 * Soft chime for every new assistant message. Respects the mute toggle.
+	 * If the browser blocks autoplay, queues the sound for the next gesture.
 	 */
 	function playNotifySound() {
-		if (state.isOpen) {
+		if (state.soundMuted) {
 			return;
 		}
 
@@ -404,6 +456,9 @@
 	}
 
 	function queueNotifySound() {
+		if (state.soundMuted) {
+			return;
+		}
 		state.pendingNotifySound = true;
 		paintBadge();
 		armNotifyUnlock();
@@ -435,7 +490,7 @@
 	}
 
 	function flushNotifySound() {
-		if (!state.pendingNotifySound || state.isOpen) {
+		if (!state.pendingNotifySound || state.soundMuted) {
 			return;
 		}
 
@@ -798,17 +853,23 @@
 				if (json.usage) {
 					state.usage = json.usage;
 				}
+				var gotAssistant = false;
 				if (json.message && json.message.content) {
 					state.messages.push({ role: 'assistant', content: json.message.content, id: json.message.id });
 					trackMessageId(json.message.id);
+					gotAssistant = true;
 				}
 				if (json.products && json.products.length) {
 					state.messages.push({ type: 'products', products: json.products });
+					gotAssistant = true;
 				}
 				// In human mode there is no inline reply: an agent answers from
 				// wp-admin and we pick it up by polling.
 				applyMode(json.mode);
 				paintMessages();
+				if (gotAssistant) {
+					playNotifySound();
+				}
 			})
 			.catch(function () {
 				setLoading(false);
@@ -987,6 +1048,7 @@
 				var incoming = json.messages || [];
 				var rendered = [];
 				var unreadDelta = 0;
+				var newAssistant = 0;
 
 				incoming.forEach(function (message) {
 					trackMessageId(message.id);
@@ -1007,8 +1069,11 @@
 						if (hasProducts && message.role === 'assistant') {
 							rendered.push({ type: 'products', products: message.products, id: message.id });
 						}
-						if (!state.isOpen && message.role === 'assistant') {
-							unreadDelta += 1;
+						if (message.role === 'assistant') {
+							newAssistant += 1;
+							if (!state.isOpen) {
+								unreadDelta += 1;
+							}
 						}
 					}
 				});
@@ -1028,7 +1093,12 @@
 				applyMode(json.mode);
 
 				if (unreadDelta > 0) {
-					bumpUnread(unreadDelta, true);
+					bumpUnread(unreadDelta, false);
+				}
+				// History restore should stay quiet; live polls and open-chat
+				// agent replies chime for every new assistant message batch.
+				if (newAssistant > 0 && !includeUser) {
+					playNotifySound();
 				}
 
 				if (rendered.length || before !== state.mode) {

@@ -165,6 +165,8 @@ final class Assets {
 					'statusOnline'  => __( 'Online', 'commercepilot' ),
 					'statusAway'    => __( 'Away', 'commercepilot' ),
 					'statusOffline' => __( 'Offline', 'commercepilot' ),
+					'muteSound'     => __( 'Mute message sounds', 'commercepilot' ),
+					'unmuteSound'   => __( 'Unmute message sounds', 'commercepilot' ),
 				),
 			)
 		);
