@@ -1031,7 +1031,7 @@
 	}
 
 	function pollMessages(includeUser) {
-		if (!state.conversationId || (document.hidden && !includeUser)) {
+		if (!state.conversationId) {
 			return;
 		}
 
@@ -1130,15 +1130,25 @@
 	function closeChat() {
 		state.isOpen = false;
 		root.classList.remove('is-open');
-		// Keep polling while a human agent owns the thread so new replies can
-		// land on the launcher badge even when the panel is closed.
-		if (state.mode === 'human' && state.conversationId) {
+		// Keep polling for any active conversation so AI and human replies
+		// still update the launcher badge and chime while the panel is closed.
+		if (state.conversationId) {
 			startPolling();
+			pollMessages(false);
 		} else {
 			stopPolling();
 		}
 		paintBadge();
 	}
+
+	document.addEventListener('visibilitychange', function () {
+		if (document.hidden || !state.conversationId) {
+			return;
+		}
+		// Catch up as soon as the shop tab is focused again (e.g. after an
+		// agent replied from wp-admin in another tab).
+		pollMessages(false);
+	});
 
 	document.addEventListener('keydown', function (event) {
 		if (event.key === 'Escape' && state.isOpen) {

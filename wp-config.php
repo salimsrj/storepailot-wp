@@ -117,8 +117,8 @@ define( 'WP_DEBUG', !!getenv_docker('WORDPRESS_DEBUG', '') );
 
 /* Add any custom values between this line and the "stop editing" line. */
 
-define( 'WP_HOME', getenv_docker( 'WORDPRESS_HOME', 'http://storepailot.test:8080' ) );
-define( 'WP_SITEURL', getenv_docker( 'WORDPRESS_SITEURL', 'http://storepailot.test:8080' ) );
+define( 'WP_HOME', getenv_docker( 'WORDPRESS_HOME', 'http://storepailot.test:7001' ) );
+define( 'WP_SITEURL', getenv_docker( 'WORDPRESS_SITEURL', 'http://storepailot.test:7001' ) );
 
 // If we're behind a proxy server and using HTTPS, we need to alert WordPress of that fact
 // see also https://wordpress.org/support/article/administration-over-ssl/#using-a-reverse-proxy
