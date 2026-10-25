@@ -18,6 +18,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class ChatWidget {
 
+	public const NONCE_ACTION = 'commercepilot_nonce';
+
 	public function __construct(
 		private Settings $settings,
 		private Assets $assets
@@ -26,6 +28,19 @@ final class ChatWidget {
 	public function register(): void {
 		add_action( 'wp_enqueue_scripts', array( $this->assets, 'enqueue_public' ) );
 		add_action( 'wp_footer', array( $this, 'render' ) );
+		add_action( 'wp_ajax_' . self::NONCE_ACTION, array( $this, 'refresh_nonce' ) );
+		add_action( 'wp_ajax_nopriv_' . self::NONCE_ACTION, array( $this, 'refresh_nonce' ) );
+	}
+
+	/**
+	 * Hands the widget a fresh REST nonce. Full-page caches serve the nonce
+	 * that was current when the page was cached; once it expires every chat
+	 * request would fail. admin-ajax authenticates by cookie, so the nonce is
+	 * minted for the right user, logged in or not.
+	 */
+	public function refresh_nonce(): void {
+		nocache_headers();
+		wp_send_json_success( array( 'nonce' => wp_create_nonce( 'wp_rest' ) ) );
 	}
 
 	public function render(): void {

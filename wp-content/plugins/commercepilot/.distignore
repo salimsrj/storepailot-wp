@@ -1,0 +1,13 @@
+# Files excluded from the release zip (see bin/build-zip.sh).
+.distignore
+.DS_Store
+.git
+.gitignore
+bin
+build
+docs
+tests
+vendor
+composer.json
+composer.lock
+phpunit.xml.dist

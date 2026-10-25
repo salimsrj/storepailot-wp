@@ -7,6 +7,36 @@
 		return;
 	}
 
+	/**
+	 * Web storage throws in some privacy modes and when site data is blocked.
+	 * Fall back to an in-memory store so the widget still works for the page.
+	 */
+	function safeStore(name) {
+		try {
+			var store = window[name];
+			var probe = '__commercepilot__';
+			store.setItem(probe, probe);
+			store.removeItem(probe);
+			return store;
+		} catch (err) {
+			var memory = {};
+			return {
+				getItem: function (key) {
+					return Object.prototype.hasOwnProperty.call(memory, key) ? memory[key] : null;
+				},
+				setItem: function (key, value) {
+					memory[key] = String(value);
+				},
+				removeItem: function (key) {
+					delete memory[key];
+				}
+			};
+		}
+	}
+
+	var localStorage = safeStore('localStorage');
+	var sessionStorage = safeStore('sessionStorage');
+
 	var Storage = {
 		visitorKey: 'commercepilot_visitor_id',
 		conversationKey: 'commercepilot_conversation_id',
@@ -121,8 +151,41 @@
 		return extra ? href + (href.indexOf('?') === -1 ? '?' : '&') + extra : href;
 	}
 
+	var NONCE_ERRORS = ['rest_cookie_invalid_nonce', 'commercepilot_invalid_nonce'];
+	var nonceRefresh = null;
+
+	/**
+	 * Full-page caches can serve a nonce that has since expired. Fetch a fresh
+	 * one (shared by concurrent callers) so the request can be retried once.
+	 */
+	function refreshNonce() {
+		if (!cfg.nonceUrl) {
+			return Promise.reject(new Error('nonce'));
+		}
+		if (!nonceRefresh) {
+			nonceRefresh = fetch(cfg.nonceUrl, { credentials: 'same-origin', cache: 'no-store' })
+				.then(function (res) {
+					return res.json();
+				})
+				.then(function (json) {
+					if (!json || !json.success || !json.data || !json.data.nonce) {
+						throw new Error('nonce');
+					}
+					cfg.nonce = json.data.nonce;
+				})
+				.then(function () {
+					nonceRefresh = null;
+				}, function (err) {
+					nonceRefresh = null;
+					throw err;
+				});
+		}
+		return nonceRefresh;
+	}
+
 	var API = {
-		request: function (method, path, body, query) {
+		request: function (method, path, body, query, isRetry) {
+			var self = this;
 			return fetch(restHref(path, query), {
 				method: method,
 				credentials: 'same-origin',
@@ -132,7 +195,18 @@
 				},
 				body: body ? JSON.stringify(body) : undefined
 			}).then(function (res) {
-				return res.json().then(function (json) {
+				// Error pages from proxies or fatal errors are not JSON.
+				return res.json().catch(function () {
+					return {};
+				}).then(function (json) {
+					var code = (json && (json.code || (json.error && json.error.code))) || '';
+					if (res.status === 403 && !isRetry && NONCE_ERRORS.indexOf(code) !== -1) {
+						return refreshNonce().then(function () {
+							return self.request(method, path, body, query, true);
+						}, function () {
+							return { ok: false, status: res.status, json: json };
+						});
+					}
 					return { ok: res.ok, status: res.status, json: json };
 				});
 			});
@@ -262,7 +336,7 @@
 		var composer = el('form', 'cp-chatbot-composer');
 		var input = document.createElement('textarea');
 		input.rows = 1;
-		input.setAttribute('aria-label', (cfg.i18n && cfg.i18n.send) || 'Message');
+		input.setAttribute('aria-label', (cfg.i18n && cfg.i18n.message) || 'Message');
 		var send = el('button', 'cp-chatbot-send', (cfg.i18n && cfg.i18n.send) || 'Send');
 		send.type = 'submit';
 		composer.appendChild(input);
@@ -414,7 +488,7 @@
 		if (state.unread > 0 && !state.isOpen) {
 			badge.hidden = false;
 			badge.textContent = state.unread > 99 ? '99+' : String(state.unread);
-			badge.setAttribute('aria-label', state.unread + ' unread messages');
+			badge.setAttribute('aria-label', ((cfg.i18n && cfg.i18n.unread) || '%d unread messages').replace('%d', String(state.unread)));
 			badge.classList.toggle('is-pending-sound', state.pendingNotifySound && !state.soundMuted);
 		} else {
 			badge.hidden = true;
@@ -634,6 +708,14 @@
 				box.appendChild(el('div', 'cp-chatbot-notice', item.content));
 				return;
 			}
+			if (item.type === 'checkout') {
+				var checkout = el('div', 'cp-chatbot-upgrade');
+				var link = el('a', '', (cfg.i18n && cfg.i18n.checkout) || 'Checkout');
+				link.href = item.url;
+				checkout.appendChild(link);
+				box.appendChild(checkout);
+				return;
+			}
 			if (item.type === 'error') {
 				var err = el('div', 'cp-chatbot-error', item.content);
 				if (item.retry) {
@@ -650,7 +732,7 @@
 		});
 		if (state.isLoading) {
 			var typing = el('div', 'cp-chatbot-typing');
-			typing.setAttribute('aria-label', 'Assistant is typing');
+			typing.setAttribute('aria-label', (cfg.i18n && cfg.i18n.typing) || 'Assistant is typing');
 			typing.setAttribute('role', 'status');
 			typing.appendChild(el('span', 'cp-chatbot-typing-dot'));
 			typing.appendChild(el('span', 'cp-chatbot-typing-dot'));
@@ -956,21 +1038,29 @@
 				return;
 			}
 			state.cart = result.json;
-			if (cfg.config.features && cfg.config.features.checkout) {
-				var checkout = el('div', 'cp-chatbot-upgrade', (cfg.i18n && cfg.i18n.checkout) || 'Checkout');
-				API.checkout().then(function (check) {
-					if (check.ok && check.json && check.json.url) {
-						var link = el('a', '', (cfg.i18n && cfg.i18n.checkout) || 'Checkout');
-						link.href = check.json.url;
-						checkout.textContent = '';
-						checkout.appendChild(link);
-						root._messages.appendChild(checkout);
-					}
-				});
-			}
 			state.messages.push({
 				role: 'assistant',
 				content: (cfg.i18n && cfg.i18n.addedToCart) || 'Added to cart.'
+			});
+			paintMessages();
+			// Let the theme's mini-cart refresh its fragments.
+			if (window.jQuery) {
+				window.jQuery(document.body).trigger('wc_fragment_refresh');
+			}
+			if (cfg.config.features && cfg.config.features.checkout) {
+				API.checkout().then(function (check) {
+					if (check.ok && check.json && check.json.url) {
+						state.messages.push({ type: 'checkout', url: check.json.url });
+						paintMessages();
+					}
+				}).catch(function () {
+					// The cart is updated; the checkout shortcut is optional.
+				});
+			}
+		}).catch(function () {
+			state.messages.push({
+				type: 'error',
+				content: (cfg.i18n && cfg.i18n.unavailable) || 'Sorry, the assistant is temporarily unavailable. Please try again.'
 			});
 			paintMessages();
 		});
@@ -1031,7 +1121,7 @@
 	}
 
 	function pollMessages(includeUser) {
-		if (!state.conversationId) {
+		if (!state.conversationId || (document.hidden && !includeUser)) {
 			return;
 		}
 

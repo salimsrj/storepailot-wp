@@ -143,6 +143,7 @@ final class Assets {
 			array(
 				'restUrl'  => esc_url_raw( rest_url( 'commercepilot/v1/' ) ),
 				'nonce'    => wp_create_nonce( 'wp_rest' ),
+				'nonceUrl' => esc_url_raw( add_query_arg( 'action', \CommercePilot\Frontend\ChatWidget::NONCE_ACTION, admin_url( 'admin-ajax.php' ) ) ),
 				'config'   => $this->settings->public_config(),
 				'iconUrl'  => esc_url_raw( COMMERCEPILOT_URL . 'public/assets/images/chat-toggle.png?v=' . self::version( 'public/assets/images/chat-toggle.png' ) ),
 				'i18n'     => array(
@@ -167,6 +168,10 @@ final class Assets {
 					'statusOffline' => __( 'Offline', 'commercepilot' ),
 					'muteSound'     => __( 'Mute message sounds', 'commercepilot' ),
 					'unmuteSound'   => __( 'Unmute message sounds', 'commercepilot' ),
+					'typing'        => __( 'Assistant is typing', 'commercepilot' ),
+					/* translators: %d: number of unread chat messages */
+					'unread'        => __( '%d unread messages', 'commercepilot' ),
+					'message'       => __( 'Message', 'commercepilot' ),
 				),
 			)
 		);

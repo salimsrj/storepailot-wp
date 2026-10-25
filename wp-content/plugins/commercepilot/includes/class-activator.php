@@ -22,9 +22,9 @@ final class Activator {
 		}
 
 		global $wp_version;
-		if ( isset( $wp_version ) && version_compare( (string) $wp_version, '6.0', '<' ) ) {
+		if ( isset( $wp_version ) && version_compare( (string) $wp_version, '6.5', '<' ) ) {
 			deactivate_plugins( COMMERCEPILOT_BASENAME );
-			wp_die( esc_html__( 'CommercePilot requires WordPress 6.0 or higher.', 'commercepilot' ) );
+			wp_die( esc_html__( 'CommercePilot requires WordPress 6.5 or higher.', 'commercepilot' ) );
 		}
 
 		if ( ! self::woocommerce_active() ) {

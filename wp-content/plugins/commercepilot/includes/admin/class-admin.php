@@ -36,6 +36,45 @@ final class Admin {
 		add_action( 'admin_post_commercepilot_disconnect', array( $this, 'disconnect' ) );
 		add_action( 'admin_post_commercepilot_test', array( $this, 'test_connection' ) );
 		add_action( 'admin_post_commercepilot_rotate', array( $this, 'rotate' ) );
+		add_action( 'admin_notices', array( $this, 'connect_notice' ) );
+		add_filter( 'plugin_action_links_' . COMMERCEPILOT_BASENAME, array( $this, 'action_links' ) );
+	}
+
+	/**
+	 * @param array<int|string, string> $links
+	 * @return array<int|string, string>
+	 */
+	public function action_links( array $links ): array {
+		$page  = $this->settings->is_connected() ? 'commercepilot-settings' : 'commercepilot-connection';
+		$label = $this->settings->is_connected() ? __( 'Settings', 'commercepilot' ) : __( 'Connect', 'commercepilot' );
+
+		array_unshift(
+			$links,
+			sprintf( '<a href="%s">%s</a>', esc_url( admin_url( 'admin.php?page=' . $page ) ), esc_html( $label ) )
+		);
+
+		return $links;
+	}
+
+	/**
+	 * Point new installs at the Connection page from the Plugins screen.
+	 */
+	public function connect_notice(): void {
+		if ( ! current_user_can( 'manage_options' ) || $this->settings->is_connected() ) {
+			return;
+		}
+
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen || 'plugins' !== $screen->id ) {
+			return;
+		}
+
+		printf(
+			'<div class="notice notice-info"><p>%1$s <a href="%2$s">%3$s</a></p></div>',
+			esc_html__( 'CommercePilot is active. Connect your store to start using the AI assistant.', 'commercepilot' ),
+			esc_url( admin_url( 'admin.php?page=commercepilot-connection' ) ),
+			esc_html__( 'Connect now', 'commercepilot' )
+		);
 	}
 
 	public function menu(): void {
@@ -112,6 +151,9 @@ final class Admin {
 
 		$result = $this->api->conversations_waiting_count();
 		if ( is_wp_error( $result ) ) {
+			// Back off so an unreachable API is not re-queried on every admin
+			// screen. The badge script retries in the background.
+			set_transient( 'commercepilot_waiting_count', 0, MINUTE_IN_SECONDS );
 			return 0;
 		}
 

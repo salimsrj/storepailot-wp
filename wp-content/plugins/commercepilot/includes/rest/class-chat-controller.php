@@ -38,8 +38,8 @@ final class ChatController {
 			return $visitor;
 		}
 
-		$message = sanitize_text_field( (string) $request->get_param( 'message' ) );
-		if ( $message === '' || strlen( $message ) > 4000 ) {
+		$message = trim( sanitize_textarea_field( (string) $request->get_param( 'message' ) ) );
+		if ( $message === '' || mb_strlen( $message ) > 4000 ) {
 			return new WP_Error( 'commercepilot_invalid_message', __( 'Please enter a valid message.', 'commercepilot' ), array( 'status' => 400 ) );
 		}
 

@@ -36,6 +36,9 @@ cp_settings_assert( ! str_contains( (string) file_get_contents( dirname( __DIR__
 
 $main = (string) file_get_contents( dirname( __DIR__ ) . '/commercepilot.php' );
 cp_settings_assert( str_contains( $main, 'Requires Plugins: woocommerce' ), 'WooCommerce declared as a required plugin' );
+cp_settings_assert( ! preg_match( '#https?://[^\'"]*\.test\b#', $main ), 'main plugin file ships no local .test URLs' );
+cp_settings_assert( str_contains( $main, "! defined( 'COMMERCEPILOT_API_URL' )" ), 'API URL can be overridden from wp-config.php' );
+cp_settings_assert( str_contains( $main, "define( 'COMMERCEPILOT_VERSION', '" ) && str_contains( $main, ' * Version: ' ), 'version constant and header present' );
 
 if ( $failed > 0 ) {
 	exit( 1 );

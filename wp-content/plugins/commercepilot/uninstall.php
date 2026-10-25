@@ -22,3 +22,4 @@ delete_transient( 'commercepilot_usage' );
 delete_transient( 'commercepilot_site' );
 delete_transient( 'commercepilot_health' );
 delete_transient( 'commercepilot_connection_status' );
+delete_transient( 'commercepilot_waiting_count' );

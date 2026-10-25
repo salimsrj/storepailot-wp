@@ -28,7 +28,8 @@
 		pickerQuery: '',
 		pickerResults: [],
 		pickerSelected: {},
-		pickerSearching: false
+		pickerSearching: false,
+		draft: ''
 	};
 
 	var timers = { list: null, thread: null, search: null };
@@ -194,6 +195,7 @@
 		state.activeId = id;
 		state.messages = [];
 		state.lastMessageId = 0;
+		state.draft = '';
 		closePicker(true);
 		paintList();
 		threadEl.innerHTML = '';
@@ -227,6 +229,10 @@
 	function paintThread() {
 		var conversation = activeConversation();
 		var agentMode = !!cfg.agentMode;
+		// Polling repaints the whole thread; keep the reply being typed.
+		var active = document.activeElement;
+		var composerFocused = !!(active && active.matches && active.matches('.cp-inbox__composer textarea'));
+		var caret = composerFocused ? active.selectionStart : null;
 		threadEl.innerHTML = '';
 
 		var header = el('div', 'cp-inbox__thread-head');
@@ -269,6 +275,16 @@
 
 		threadEl.appendChild(renderComposer());
 		body.scrollTop = body.scrollHeight;
+
+		if (composerFocused) {
+			var field = threadEl.querySelector('.cp-inbox__composer textarea');
+			if (field && !field.disabled) {
+				field.focus();
+				if (caret !== null) {
+					field.setSelectionRange(caret, caret);
+				}
+			}
+		}
 	}
 
 	function renderMessage(message) {
@@ -329,6 +345,10 @@
 			? t('replyPlaceholder', 'Write a reply…')
 			: t('takeOverFirst', 'Take over this chat to reply manually.');
 		input.disabled = !canReply || state.busy;
+		input.value = state.draft;
+		input.addEventListener('input', function () {
+			state.draft = input.value;
+		});
 
 		var actions = el('div', 'cp-inbox__composer-actions');
 
@@ -549,6 +569,7 @@
 		var content = (input.value || '').trim();
 		state.busy = true;
 		input.value = '';
+		state.draft = '';
 		closePicker(true);
 		paintThread();
 
@@ -560,6 +581,7 @@
 				appendMessage(message);
 			})
 			.catch(function (error) {
+				state.draft = content;
 				window.alert(error.message);
 			})
 			.then(function () {
@@ -605,6 +627,7 @@
 
 		state.busy = true;
 		input.value = '';
+		state.draft = '';
 		closePicker(true);
 		paintThread();
 
@@ -613,6 +636,7 @@
 				appendMessage(message);
 			})
 			.catch(function (error) {
+				state.draft = content;
 				window.alert(error.message);
 			})
 			.then(function () {

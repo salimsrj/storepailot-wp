@@ -29,7 +29,7 @@ final class Privacy {
 		wp_add_privacy_policy_content(
 			'CommercePilot',
 			wp_kses_post(
-				__( 'CommercePilot sends chat messages, a generated visitor ID, and a conversation ID to the CommercePilot Laravel API so the AI assistant can answer product questions. Product, cart, and checkout actions stay on this store through WooCommerce. Payment details are never sent to CommercePilot. Conversations are stored by the CommercePilot SaaS account, not in WordPress.', 'commercepilot' )
+				__( 'CommercePilot sends chat messages, a generated visitor ID, and a conversation ID to the CommercePilot service (https://commercepilot.com) so the AI assistant can answer product questions. Product, cart, and checkout actions stay on this store through WooCommerce. Payment details are never sent to CommercePilot. Conversations are stored by the CommercePilot SaaS account, not in WordPress.', 'commercepilot' )
 			)
 		);
 	}

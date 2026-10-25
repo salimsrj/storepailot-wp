@@ -36,7 +36,7 @@ $settings = new CommercePilot\Settings();
 $settings->ensure_defaults();
 $settings->update(
 	array(
-		'api_url' => rtrim( (string) ( $payload['api_url'] ?? 'http://storepailotadmin.test' ), '/' ),
+		'api_url' => rtrim( (string) ( $payload['api_url'] ?? COMMERCEPILOT_API_URL ), '/' ),
 		'enabled' => true,
 	)
 );

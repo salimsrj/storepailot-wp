@@ -166,11 +166,11 @@ final class Connection {
 		$enable_agent = (bool) ( $data['enable_agent'] ?? false );
 		$can_enable   = (bool) ( $data['can_enable_agent'] ?? false );
 
-		$this->settings->update(
-			array(
-				'agent_mode' => $enable_agent,
-			)
-		);
+		// Settings::update() also flushes the API caches, so skip the write when
+		// nothing changed; this runs on every Connection page load.
+		if ( (bool) $this->settings->get( 'agent_mode' ) !== $enable_agent ) {
+			$this->settings->update( array( 'agent_mode' => $enable_agent ) );
+		}
 
 		return array(
 			'enable_agent'     => $enable_agent,

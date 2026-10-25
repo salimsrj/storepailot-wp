@@ -109,7 +109,9 @@ final class SiteController {
 			$params = $request->get_params();
 		}
 
-		unset( $params['site_token'], $params['site_secret'] );
+		// Credentials go through /admin/connect and Agent Mode through the
+		// subscription check in Connection::set_agent_mode(), never through here.
+		unset( $params['site_id'], $params['site_token'], $params['site_secret'], $params['api_url'], $params['agent_mode'] );
 		$this->settings->update( $params );
 
 		if ( $this->settings->is_connected() ) {

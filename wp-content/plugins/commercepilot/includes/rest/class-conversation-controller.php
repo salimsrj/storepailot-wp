@@ -205,7 +205,7 @@ final class ConversationController {
 		$content  = sanitize_textarea_field( (string) ( $request->get_param( 'content' ) ?? '' ) );
 		$products = $this->resolve_shared_products( $request->get_param( 'product_ids' ) );
 
-		if ( strlen( $content ) > 4000 ) {
+		if ( mb_strlen( $content ) > 4000 ) {
 			return new WP_Error( 'commercepilot_invalid_message', __( 'Please enter a valid reply.', 'commercepilot' ), array( 'status' => 400 ) );
 		}
 

@@ -120,6 +120,11 @@ define( 'WP_DEBUG', !!getenv_docker('WORDPRESS_DEBUG', '') );
 define( 'WP_HOME', getenv_docker( 'WORDPRESS_HOME', 'http://storepailot.test:7001' ) );
 define( 'WP_SITEURL', getenv_docker( 'WORDPRESS_SITEURL', 'http://storepailot.test:7001' ) );
 
+// CommercePilot: point the plugin at the local backend instead of production.
+define( 'COMMERCEPILOT_API_URL', getenv_docker( 'COMMERCEPILOT_API_URL', 'http://storepailotadmin.test' ) );
+define( 'COMMERCEPILOT_SIGNUP_URL', getenv_docker( 'COMMERCEPILOT_SIGNUP_URL', 'http://storepailot.test:8188/' ) );
+define( 'COMMERCEPILOT_PLANS_URL', getenv_docker( 'COMMERCEPILOT_PLANS_URL', 'http://storepailot.test:8188/dashboard/plans' ) );
+
 // If we're behind a proxy server and using HTTPS, we need to alert WordPress of that fact
 // see also https://wordpress.org/support/article/administration-over-ssl/#using-a-reverse-proxy
 if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strpos($_SERVER['HTTP_X_FORWARDED_PROTO'], 'https') !== false) {

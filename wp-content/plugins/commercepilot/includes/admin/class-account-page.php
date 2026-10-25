@@ -29,7 +29,7 @@ final class AccountPage {
 		}
 
 		$site        = array();
-		$upgrade_url = 'https://app.commercepilot.com/upgrade';
+		$upgrade_url = COMMERCEPILOT_PLANS_URL;
 
 		if ( $this->api && $this->settings->is_connected() ) {
 			$raw = $this->api->site();

@@ -15,6 +15,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class ApiClient {
 
+	/**
+	 * Timeout for reads that run while rendering wp-admin screens. Chat keeps
+	 * the longer default because AI replies can legitimately take a while.
+	 */
+	private const ADMIN_TIMEOUT = 8;
+
 	public function __construct( private Settings $settings ) {}
 
 	/**
@@ -40,7 +46,7 @@ final class ApiClient {
 	 * @return array<string, mixed>|\WP_Error
 	 */
 	public function conversations_waiting_count(): array|\WP_Error {
-		return $this->request( 'GET', '/api/v1/conversations/waiting-count', array(), array( 'auth' => true, 'hmac' => true ) );
+		return $this->request( 'GET', '/api/v1/conversations/waiting-count', array(), array( 'auth' => true, 'hmac' => true, 'timeout' => self::ADMIN_TIMEOUT ) );
 	}
 
 	/**
@@ -111,7 +117,7 @@ final class ApiClient {
 			return $cached;
 		}
 
-		$result = $this->request( 'GET', '/api/v1/site', array(), array( 'auth' => true ) );
+		$result = $this->request( 'GET', '/api/v1/site', array(), array( 'auth' => true, 'timeout' => self::ADMIN_TIMEOUT ) );
 		if ( ! is_wp_error( $result ) ) {
 			set_transient( 'commercepilot_site', $result, 5 * MINUTE_IN_SECONDS );
 		}
@@ -146,7 +152,7 @@ final class ApiClient {
 			return $cached;
 		}
 
-		$result = $this->request( 'GET', '/api/v1/usage', array(), array( 'auth' => true ) );
+		$result = $this->request( 'GET', '/api/v1/usage', array(), array( 'auth' => true, 'timeout' => self::ADMIN_TIMEOUT ) );
 		if ( ! is_wp_error( $result ) ) {
 			set_transient( 'commercepilot_usage', $result, MINUTE_IN_SECONDS );
 		}
@@ -200,6 +206,8 @@ final class ApiClient {
 			$headers['X-CommercePilot-Signature'] = Security::sign_request( $timestamp, $method, $path, $raw, $this->settings->site_secret() );
 		}
 
+		$headers['User-Agent'] = 'CommercePilot/' . COMMERCEPILOT_VERSION . '; ' . home_url( '/' );
+
 		$args = array(
 			'method'      => $method,
 			'timeout'     => $timeout,
@@ -243,7 +251,7 @@ final class ApiClient {
 			if ( $code === 'ai_quota_exceeded' ) {
 				return new \WP_Error(
 					'ai_quota_exceeded',
-					__( 'The OpenAI quota for this CommercePilot account is exhausted. Add billing or a new API key in Laravel AI settings.', 'commercepilot' ),
+					__( 'The assistant is unavailable right now. Please try again later.', 'commercepilot' ),
 					array( 'status' => 429 )
 				);
 			}

@@ -44,9 +44,11 @@ final class UsagePage {
 			} else {
 				$data  = is_array( $raw['data'] ?? null ) ? $raw['data'] : $raw;
 				$usage = array(
-					'used'      => absint( $data['used'] ?? 0 ),
-					'limit'     => absint( $data['limit'] ?? 0 ),
-					'remaining' => absint( $data['remaining'] ?? 0 ),
+					'used'         => absint( $data['used'] ?? 0 ),
+					'limit'        => absint( $data['limit'] ?? 0 ),
+					'remaining'    => absint( $data['remaining'] ?? 0 ),
+					'period_start' => sanitize_text_field( (string) ( $data['period_start'] ?? '' ) ),
+					'period_end'   => sanitize_text_field( (string) ( $data['period_end'] ?? '' ) ),
 				);
 			}
 		}
